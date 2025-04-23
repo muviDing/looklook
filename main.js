@@ -621,6 +621,40 @@ function registerIpcHandlers() {
       throw error;
     }
   });
+
+  // 枚举值管理
+  ipcMain.handle('get-enum-values', async (event, enumType) => {
+    console.log(`处理get-enum-values请求: ${enumType}`);
+    try {
+      const values = await db.getEnumValues(enumType);
+      return values;
+    } catch (error) {
+      console.error(`获取枚举值[${enumType}]失败:`, error);
+      return [];
+    }
+  });
+
+  ipcMain.handle('save-enum-values', async (event, enumType, values) => {
+    console.log(`处理save-enum-values请求: ${enumType}, 值数量: ${values.length}`);
+    try {
+      const savedValues = await db.saveEnumValues(enumType, values);
+      return savedValues;
+    } catch (error) {
+      console.error(`保存枚举值[${enumType}]失败:`, error);
+      throw error;
+    }
+  });
+
+  ipcMain.handle('add-enum-value', async (event, enumType, value) => {
+    console.log(`处理add-enum-value请求: ${enumType}, 值: ${value}`);
+    try {
+      const updatedValues = await db.addEnumValue(enumType, value);
+      return updatedValues;
+    } catch (error) {
+      console.error(`添加枚举值[${value}]到[${enumType}]失败:`, error);
+      throw error;
+    }
+  });
   
   console.log('IPC事件处理程序注册完成');
 }

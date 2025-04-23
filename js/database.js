@@ -9,6 +9,8 @@ const Datastore = require('nedb');
 
 // 数据库文件路径
 const dbPath = path.join(process.env.APPDATA || process.env.HOME, 'zaigaikankanle', 'videos.db');
+// 枚举值数据库文件路径
+const enumDbPath = path.join(process.env.APPDATA || process.env.HOME, 'zaigaikankanle', 'enums.db');
 
 // 确保数据库目录存在
 const dbDir = path.dirname(dbPath);
@@ -23,12 +25,147 @@ const db = new Datastore({
     timestampData: true  // 自动添加 createdAt 和 updatedAt 字段
 });
 
+// 初始化枚举值数据库
+const enumDb = new Datastore({
+    filename: enumDbPath,
+    autoload: true,
+    timestampData: true
+});
+
 // 创建索引以提高查询性能
 db.ensureIndex({ fieldName: 'id', unique: true });
 db.ensureIndex({ fieldName: 'filePath', unique: true });
+enumDb.ensureIndex({ fieldName: 'type', unique: true });
 
 // 视频数据缓存
 let videoCache = [];
+// 枚举值缓存
+let enumCache = {};
+
+/**
+ * 获取指定类型的枚举值
+ * @param {string} enumType 枚举类型，如 'collection', 'actors' 等
+ * @returns {Promise<Array<string>>} 枚举值数组
+ */
+function getEnumValues(enumType) {
+    return new Promise((resolve, reject) => {
+        // 先尝试从缓存获取
+        if (enumCache[enumType]) {
+            resolve(enumCache[enumType]);
+            return;
+        }
+
+        // 从数据库获取
+        enumDb.findOne({ type: enumType }, (err, doc) => {
+            if (err) {
+                console.error(`获取枚举值[${enumType}]失败:`, err);
+                reject(err);
+                return;
+            }
+            
+            // 如果记录存在，返回其值；否则返回空数组
+            const values = doc ? doc.values : [];
+            
+            // 更新缓存
+            enumCache[enumType] = values;
+            
+            resolve(values);
+        });
+    });
+}
+
+/**
+ * 保存枚举值数组
+ * @param {string} enumType 枚举类型
+ * @param {Array<string>} values 枚举值数组
+ * @returns {Promise<Array<string>>} 保存后的枚举值数组
+ */
+function saveEnumValues(enumType, values) {
+    return new Promise((resolve, reject) => {
+        // 确保values是数组
+        if (!Array.isArray(values)) {
+            values = [];
+        }
+        
+        // 去重并排序
+        const uniqueValues = [...new Set(values)].sort();
+        
+        enumDb.update(
+            { type: enumType }, 
+            { type: enumType, values: uniqueValues },
+            { upsert: true },
+            (err) => {
+                if (err) {
+                    console.error(`保存枚举值[${enumType}]失败:`, err);
+                    reject(err);
+                    return;
+                }
+                
+                // 更新缓存
+                enumCache[enumType] = uniqueValues;
+                
+                resolve(uniqueValues);
+            }
+        );
+    });
+}
+
+/**
+ * 添加单个枚举值
+ * @param {string} enumType 枚举类型
+ * @param {string} value 要添加的枚举值
+ * @returns {Promise<Array<string>>} 添加后的枚举值数组
+ */
+function addEnumValue(enumType, value) {
+    return new Promise(async (resolve, reject) => {
+        try {
+            // 空值检查
+            if (!value || value.trim() === '') {
+                console.warn(`尝试添加空枚举值到[${enumType}]，已忽略`);
+                const currentValues = await getEnumValues(enumType);
+                resolve(currentValues);
+                return;
+            }
+            
+            // 获取当前枚举值
+            const currentValues = await getEnumValues(enumType);
+            
+            // 检查是否已存在
+            if (currentValues.includes(value)) {
+                console.log(`枚举值[${value}]已存在于[${enumType}]，无需添加`);
+                resolve(currentValues);
+                return;
+            }
+            
+            // 添加新值并保存
+            currentValues.push(value);
+            const updatedValues = await saveEnumValues(enumType, currentValues);
+            
+            resolve(updatedValues);
+        } catch (error) {
+            console.error(`添加枚举值[${value}]到[${enumType}]失败:`, error);
+            reject(error);
+        }
+    });
+}
+
+/**
+ * 初始化枚举值缓存
+ */
+async function initEnumCache() {
+    try {
+        // 预定义的枚举类型
+        const enumTypes = ['collection', 'actors'];
+        
+        // 加载所有枚举类型的值
+        for (const type of enumTypes) {
+            const values = await getEnumValues(type);
+            console.log(`已加载枚举值[${type}]: ${values.length}个`);
+        }
+    } catch (error) {
+        console.error('初始化枚举值缓存失败:', error);
+    }
+}
 
 /**
  * 初始化数据库模块
@@ -39,6 +176,10 @@ function initDatabase() {
     .then(() => {
         // 检查并清理可能存在的重复记录
         return cleanupDuplicateVideos();
+    })
+    .then(() => {
+        // 初始化枚举值缓存
+        return initEnumCache();
     })
     .then(() => {
         console.log('数据库模块初始化完成');
@@ -338,5 +479,8 @@ module.exports = {
     deleteVideos,
     updateVideoViewInfo,
     cleanupDuplicateVideos,
-    getVideoCache: () => videoCache
+    getVideoCache: () => videoCache,
+    getEnumValues,
+    saveEnumValues,
+    addEnumValue
 };

@@ -5,6 +5,8 @@
 
 // 获取全局视频数据的引用以及渲染函数
 import { videoData, renderTableView, renderGridView } from './videoData.js';
+// 导入多选下拉组件
+import { initMultiSelect } from './multiselect.js';
 
 // 当前选中的视频ID
 let currentVideoId = null;
@@ -18,11 +20,14 @@ let currentThumbnailUrl = '';
 let editingThumbnailUrl = '';
 // 当前视图模式: 'view' 或 'edit'
 let currentViewMode = 'view';
+// 多选下拉组件实例
+let collectionSelect = null;
+let actorsSelect = null;
 
 /**
  * 初始化详情抽屉
  */
-function initDetailDrawer() {
+async function initDetailDrawer() {
     console.log('初始化详情抽屉');
     
     // 创建背景遮罩
@@ -30,6 +35,17 @@ function initDetailDrawer() {
         const backdrop = document.createElement('div');
         backdrop.className = 'drawer-backdrop';
         document.body.appendChild(backdrop);
+    }
+    
+    // 初始化多选下拉组件
+    try {
+        collectionSelect = await initMultiSelect('collection', 'collection', '搜索或添加新合集...');
+        console.log('初始化合集多选组件成功');
+        
+        actorsSelect = await initMultiSelect('actors', 'actors', '搜索或添加新演员...');
+        console.log('初始化演员多选组件成功');
+    } catch (error) {
+        console.error('初始化多选组件失败:', error);
     }
     
     // 获取DOM元素
@@ -42,8 +58,13 @@ function initDetailDrawer() {
     const changePreviewBtnEdit = document.getElementById('change-preview-btn-edit');
     const ratingStars = document.querySelectorAll('#detail-rating i');
     
-    // 点击背景遮罩关闭抽屉
-    backdrop.addEventListener('click', closeDetailDrawer);
+    // 点击背景遮罩关闭抽屉，仅在非编辑模式下生效
+    backdrop.addEventListener('click', (e) => {
+        // 仅在非编辑模式下点击遮罩关闭抽屉
+        if (currentViewMode !== 'edit') {
+            closeDetailDrawer();
+        }
+    });
     
     // 查看视图的编辑按钮事件
     viewEditBtn.addEventListener('click', () => switchViewMode('edit'));
@@ -65,6 +86,24 @@ function initDetailDrawer() {
             playVideo(currentVideoId);
         }
     });
+    
+    // 上映日期整个输入框的点击事件
+    const dateInputGroup = document.querySelector('.date-input-group');
+    if (dateInputGroup) {
+        dateInputGroup.addEventListener('click', function() {
+            // 触发日期输入框点击，打开日期选择器
+            const dateInput = document.getElementById('detail-releasedate');
+            if (dateInput) {
+                // 移除pointer-events: none以允许点击
+                dateInput.style.pointerEvents = 'auto';
+                dateInput.showPicker ? dateInput.showPicker() : dateInput.click();
+                // 点击后恢复pointer-events: none
+                setTimeout(() => {
+                    dateInput.style.pointerEvents = 'none';
+                }, 100);
+            }
+        });
+    }
     
     // 评分星星交互
     ratingStars.forEach(star => {
@@ -137,6 +176,7 @@ function switchViewMode(mode) {
     const editMode = document.getElementById('detail-edit-mode');
     const viewFooterActions = document.getElementById('view-footer-actions');
     const editFooterActions = document.getElementById('edit-footer-actions');
+    const backdrop = document.querySelector('.drawer-backdrop');
     
     if (mode === 'edit') {
         // 切换到编辑视图
@@ -150,6 +190,9 @@ function switchViewMode(mode) {
         // 保存当前预览图URL作为编辑开始时的状态
         editingThumbnailUrl = currentThumbnailUrl;
         
+        // 添加编辑模式的类名到背景遮罩
+        backdrop.classList.add('editing');
+        
         currentViewMode = 'edit';
     } else {
         // 切换到查看视图
@@ -159,6 +202,9 @@ function switchViewMode(mode) {
         // 切换底部按钮
         editFooterActions.style.display = 'none';
         viewFooterActions.style.display = 'flex';
+        
+        // 移除编辑模式的类名
+        backdrop.classList.remove('editing');
         
         currentViewMode = 'view';
         
@@ -197,12 +243,6 @@ function openDetailDrawer(videoId) {
     currentThumbnailUrl = originalThumbnailUrl;
     editingThumbnailUrl = originalThumbnailUrl;
     
-    // 移除可能存在的恢复按钮
-    const restoreBtn = document.getElementById('restore-preview-btn');
-    if (restoreBtn) {
-        restoreBtn.remove();
-    }
-    
     // 设置预览图（查看模式）
     const previewImgUrl = currentThumbnailUrl ? 
         currentThumbnailUrl : 'https://via.placeholder.com/500x280?text=No+Preview';
@@ -219,8 +259,17 @@ function openDetailDrawer(videoId) {
     
     // 填充编辑表单
     document.getElementById('detail-code').value = video.code || '';
-    document.getElementById('detail-collection').value = video.collection || '';
-    document.getElementById('detail-actors').value = video.actors || '';
+    
+    // 使用多选组件设置合集值
+    if (collectionSelect) {
+        collectionSelect.setValue(video.collection || '');
+    }
+    
+    // 使用多选组件设置演员值
+    if (actorsSelect) {
+        actorsSelect.setValue(video.actors || '');
+    }
+    
     document.getElementById('detail-notes').value = video.notes || '';
     
     if (video.releaseDate) {
@@ -234,7 +283,13 @@ function openDetailDrawer(videoId) {
     
     // 显示抽屉和背景遮罩
     document.getElementById('detail-drawer').classList.add('open');
-    document.querySelector('.drawer-backdrop').classList.add('visible');
+    const backdrop = document.querySelector('.drawer-backdrop');
+    backdrop.classList.add('visible');
+    
+    // 确保不是编辑模式遮罩样式
+    if (currentViewMode !== 'edit') {
+        backdrop.classList.remove('editing');
+    }
 }
 
 /**
@@ -374,14 +429,6 @@ function updateViewRating(rating) {
         
         ratingContainer.appendChild(star);
     }
-    
-    // 如果有评分，显示数值
-    if (rating > 0) {
-        const ratingText = document.createElement('span');
-        ratingText.textContent = ` ${rating.toFixed(1)}`;
-        ratingText.style.marginLeft = '6px';
-        ratingContainer.appendChild(ratingText);
-    }
 }
 
 /**
@@ -389,7 +436,10 @@ function updateViewRating(rating) {
  */
 function closeDetailDrawer() {
     document.getElementById('detail-drawer').classList.remove('open');
-    document.querySelector('.drawer-backdrop').classList.remove('visible');
+    
+    const backdrop = document.querySelector('.drawer-backdrop');
+    backdrop.classList.remove('visible');
+    backdrop.classList.remove('editing');
     
     // 清空当前视频ID、评分和预览图
     currentVideoId = null;
@@ -401,8 +451,13 @@ function closeDetailDrawer() {
     // 重置抽屉内容
     document.getElementById('detail-preview').style.backgroundImage = '';
     document.getElementById('detail-code').value = '';
-    document.getElementById('detail-collection').value = '';
-    document.getElementById('detail-actors').value = '';
+    // 重置多选组件
+    if (collectionSelect) {
+        collectionSelect.setValue('');
+    }
+    if (actorsSelect) {
+        actorsSelect.setValue('');
+    }
     document.getElementById('detail-releasedate').value = '';
     document.getElementById('detail-notes').value = '';
     resetStarsToValue();
@@ -443,19 +498,6 @@ async function changePreviewImage() {
                 
                 // 设置编辑模式下的预览图
                 document.getElementById('detail-preview-edit').style.backgroundImage = `url("${thumbnailPath}")`;
-                
-                // 添加恢复原图按钮，如果之前不存在
-                if (!document.getElementById('restore-preview-btn')) {
-                    const restoreBtn = document.createElement('button');
-                    restoreBtn.id = 'restore-preview-btn';
-                    restoreBtn.className = 'restore-preview-btn';
-                    restoreBtn.innerHTML = '<i class="fas fa-undo"></i> 恢复原图';
-                    restoreBtn.addEventListener('click', restoreOriginalImage);
-                    
-                    // 添加到预览控制区
-                    const controlsContainer = document.querySelector('.detail-edit-mode .preview-controls');
-                    controlsContainer.appendChild(restoreBtn);
-                }
             } catch (copyError) {
                 console.error('复制图片失败:', copyError);
                 alert('无法复制选中的图片，请重试或选择其他图片');
@@ -606,8 +648,25 @@ async function saveVideoDetails() {
     
     // 获取表单数据
     const code = document.getElementById('detail-code').value;
-    const collection = document.getElementById('detail-collection').value;
-    const actors = document.getElementById('detail-actors').value;
+    
+    // 使用多选组件获取合集值
+    let collection = '';
+    if (collectionSelect) {
+        collection = collectionSelect.getValue().join(',');
+    } else {
+        // 兼容旧版本，如果多选组件未初始化，则使用隐藏输入框的值
+        collection = document.getElementById('detail-collection').value;
+    }
+    
+    // 使用多选组件获取演员值
+    let actors = '';
+    if (actorsSelect) {
+        actors = actorsSelect.getValue().join(',');
+    } else {
+        // 兼容旧版本，如果多选组件未初始化，则使用隐藏输入框的值
+        actors = document.getElementById('detail-actors').value;
+    }
+    
     const notes = document.getElementById('detail-notes').value;
     const releaseDate = document.getElementById('detail-releasedate').value;
     

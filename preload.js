@@ -36,5 +36,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   updateVideo: (video) => ipcRenderer.invoke('update-video', video),
   deleteVideo: (videoId) => ipcRenderer.invoke('delete-video', videoId),
   deleteVideos: (videoIds) => ipcRenderer.invoke('delete-videos', videoIds),
-  cleanupDuplicates: () => ipcRenderer.invoke('cleanup-duplicates')
+  cleanupDuplicates: () => ipcRenderer.invoke('cleanup-duplicates'),
+  
+  // 枚举值管理
+  getEnumValues: (enumType) => ipcRenderer.invoke('get-enum-values', enumType),
+  saveEnumValues: (enumType, values) => ipcRenderer.invoke('save-enum-values', enumType, values),
+  addEnumValue: (enumType, value) => ipcRenderer.invoke('add-enum-value', enumType, value)
 });
