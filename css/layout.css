@@ -1,0 +1,893 @@
+/* 整体应用容器 */
+body {
+    background-color: #f5f7fa;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+}
+
+.app-container {
+    width: 100%; /* 修改为100%以适应Electron窗口 */
+    height: 100vh; /* 修改为100vh以适应Electron窗口 */
+    margin: 0; /* 移除外边距 */
+    overflow: hidden;
+    position: relative;
+    background-color: #ffffff;
+    display: flex;
+    flex-direction: column;
+    border-radius: 0; /* 移除圆角，因为是桌面应用 */
+    box-shadow: none; /* 移除阴影，因为是桌面应用 */
+}
+
+/* 区域A: 标题栏 */
+.title-bar {
+    background-color: #4f46e5;
+    color: white;
+    padding: 0.5rem 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    -webkit-app-region: drag; /* 允许拖动窗口 */
+}
+
+.title {
+    display: flex;
+    justify-content: center;
+    flex-grow: 1; /* 让标题占据中间空间 */
+    text-align: center; /* 确保文本居中 */
+}
+
+.window-controls {
+    display: flex; /* 水平排列按钮 */
+    align-items: center;
+    -webkit-app-region: no-drag; /* 按钮区域不可拖动 */
+}
+
+.window-controls button {
+    background: transparent;
+    border: none;
+    color: white;
+    margin-left: 0.5rem;
+    cursor: pointer;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+}
+
+.window-controls button:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* 区域B: 搜索和筛选 */
+.search-filter-bar {
+    padding: 1rem;
+    background-color: #ffffff;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    align-items: center;
+}
+
+.search-box {
+    flex-grow: 1;
+    position: relative;
+}
+
+.search-box input {
+    width: 100%;
+    padding: 0.5rem 1rem 0.5rem 2.5rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+}
+
+.search-box i {
+    position: absolute;
+    left: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #9ca3af;
+}
+
+/* 区域C: 功能按钮 */
+.function-bar {
+    padding: 0.75rem 1rem;
+    background-color: #f9fafb;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.batch-actions {
+    display: none; /* 默认隐藏批量操作按钮 */
+}
+
+.batch-actions.visible {
+    display: flex;
+}
+
+.view-toggle {
+    display: flex;
+    border: 1px solid #d1d5db;
+    border-radius: 0.375rem;
+    overflow: hidden;
+}
+
+.view-toggle button {
+    padding: 0.25rem 0.5rem;
+    background-color: white;
+    border: none;
+    cursor: pointer;
+}
+
+.view-toggle button.active {
+    background-color: #4f46e5;
+    color: white;
+}
+
+/* 新的视图切换按钮组样式 */
+.view-toggle-buttons {
+    display: flex;
+    align-items: center;
+}
+
+.view-toggle-buttons button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.view-toggle-buttons button:hover {
+    background-color: #e5e7eb;
+}
+
+.header-settings-btn,
+.sort-btn,
+.view-toggle-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 4px;
+    position: relative;
+}
+
+/* 按钮悬停提示 */
+.header-settings-btn:hover::after,
+.sort-btn:hover::after,
+.view-toggle-btn:hover::after {
+    content: attr(title);
+    position: absolute;
+    bottom: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 10;
+}
+
+/* 区域D: 视频列表 */
+.video-list-container {
+    flex: 1;
+    overflow-y: auto; /* 只在内容超出时显示滚动条 */
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start; /* 确保内容从顶部开始 */
+    height: 100%; /* 确保容器占满可用高度 */
+    position: relative; /* 确保定位上下文 */
+}
+
+/* 表格容器，添加水平滚动 */
+.table-container {
+    width: 100%;
+    height: calc(100% - 10px); /* 设置固定高度，留出底部空间给滚动条 */
+    overflow-x: auto;
+    overflow-y: auto;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+/* 确保表格容器内的滚动条固定在底部 */
+.table-container::-webkit-scrollbar {
+    height: 10px;
+    background-color: #f5f5f5;
+}
+
+.table-container::-webkit-scrollbar-thumb {
+    background-color: #c1c1c1;
+    border-radius: 5px;
+}
+
+.table-container::-webkit-scrollbar-track {
+    background-color: #f5f5f5;
+}
+
+/* 确保画廊视图和表格视图不会同时显示 */
+.video-grid.hidden,
+.video-table.hidden,
+.table-container.hidden {
+    display: none !important;
+}
+
+.video-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 1rem;
+    margin-top: 0;
+    align-content: start; /* 确保内容从顶部开始 */
+    width: 100%; /* 确保网格占满容器宽度 */
+    height: auto; /* 高度自适应内容 */
+    align-self: flex-start; /* 确保网格从顶部开始 */
+    min-height: 0; /* 修改为0，防止被挤压 */
+    justify-content: start; /* 水平方向也从开始位置排列 */
+    overflow-y: auto; /* 允许垂直滚动 */
+    position: absolute; /* 使用绝对定位 */
+    top: 0;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 1rem; /* 添加内边距，避免视频卡片贴在容器边缘 */
+}
+
+.video-table {
+    width: 100%;
+    table-layout: fixed;
+    border-collapse: separate;
+    border-spacing: 0;
+    min-width: 1800px;
+}
+
+.video-table th, .video-table td {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* 固定表头 */
+.video-table th {
+    position: sticky;
+    top: 0;
+    background-color: #f5f5f5;
+    z-index: 10;
+    font-weight: bold;
+    user-select: none;
+}
+
+/* 确保最左侧复选框列固定 */
+.video-table th.sticky-left,
+.video-table td.sticky-left {
+    position: sticky;
+    left: 0;
+    background-color: inherit;
+    z-index: 5;
+}
+
+/* 当左侧固定列为表头时，提高z-index以确保其显示在最上层 */
+.video-table th.sticky-left {
+    z-index: 15;
+    background-color: #f5f5f5;
+}
+
+/* 表格单元格悬停时的背景色 */
+.video-table tbody tr:hover td {
+    background-color: #f3f4f6;
+}
+
+/* 确保悬停状态下固定列也保持相同的背景色 */
+.video-table tbody tr:hover td.sticky-left {
+    background-color: #f3f4f6;
+}
+
+/* 列宽调整手柄样式 */
+.video-table th:not(.checkbox-cell)::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 5px;
+    height: 100%;
+    background-color: transparent;
+    cursor: col-resize;
+}
+
+.video-table th:hover::after {
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+.video-table th.resizing::after {
+    background-color: rgba(0, 0, 0, 0.2);
+}
+
+/* 不允许对复选框列调整宽度 */
+.video-table th.checkbox-cell::after {
+    display: none;
+}
+
+/* 设置最小宽度以确保内容显示 */
+.video-table th.checkbox-cell, .video-table td.checkbox-cell {
+    width: 40px;
+    min-width: 40px;
+    max-width: 40px;
+    text-align: center;
+}
+
+.video-table th:not(.checkbox-cell) {
+    min-width: 100px;
+}
+
+/* 确保在调整大小时保持表头样式 */
+.table-container {
+    overflow-x: auto;
+    overflow-y: auto;
+    max-height: calc(100vh - 220px);
+}
+
+/* 设置固定列的样式 */
+.sticky-left {
+    position: sticky;
+    left: 0;
+    background-color: #fff;
+    z-index: 5;
+}
+
+.sticky-right {
+    position: sticky;
+    right: 0;
+    background-color: #fff;
+    z-index: 5;
+}
+
+/* 确保表格行在悬停时有反应 */
+.video-table tr:hover td {
+    background-color: #f9f9f9;
+}
+
+/* 选中行的样式 */
+.video-table tr.selected td {
+    background-color: #e6f7ff;
+}
+
+/* 确保在悬停状态下复选框单元格可以清晰识别 */
+.video-table td.checkbox-cell:hover {
+    background-color: #f0f0f0;
+}
+
+/* 设置表头中的复选框与普通复选框区分 */
+.video-table th.checkbox-cell input[type="checkbox"] {
+    margin: 0;
+}
+
+/* 修复当表格过宽时的布局问题 */
+.table-view-container {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+}
+
+/* 表格行悬停效果 */
+.video-table tbody tr:hover td:not(.checkbox-cell) {
+    background-color: #f3f4f6;
+}
+
+/* 表格中的操作按钮 */
+.video-table .action-btn {
+    padding: 0.25rem;
+    background: transparent;
+    border: none;
+    color: #6b7280;
+    cursor: pointer;
+    margin-right: 0.25rem;
+    position: relative;
+}
+
+.video-table .action-btn:hover {
+    color: #4f46e5;
+}
+
+/* 下拉菜单样式 */
+.dropdown-menu {
+    position: absolute;
+    right: 0;
+    top: 100%;
+    background-color: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.375rem;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    z-index: 10;
+    min-width: 120px;
+    margin-top: 0.25rem;
+}
+
+.dropdown-menu.hidden {
+    display: none;
+}
+
+.dropdown-item {
+    display: flex;
+    align-items: center;
+    padding: 0.5rem 0.75rem;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #374151;
+    font-size: 0.875rem;
+    white-space: nowrap;
+}
+
+.dropdown-item:hover {
+    background-color: #f3f4f6;
+}
+
+.dropdown-item i {
+    margin-right: 0.5rem;
+    width: 1rem;
+    text-align: center;
+}
+
+/* 视频卡片样式 */
+.video-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 0.375rem;
+    overflow: hidden;
+    transition: all 0.2s;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    height: 280px; /* 固定高度，防止被挤压 */
+    background-color: white;
+}
+
+.video-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.video-thumbnail {
+    height: 160px;
+    background-color: #f7fafc;
+    background-size: cover;
+    background-position: center;
+    position: relative;
+    flex-shrink: 0;
+    cursor: default; /* 默认光标，表示需要双击才能播放 */
+}
+
+.video-info {
+    padding: 0.5rem;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.video-title {
+    font-size: 0.875rem;
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #1a202c;
+}
+
+.video-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    color: #718096;
+}
+
+.video-actors {
+    font-size: 0.75rem;
+    color: #4a5568;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-bottom: 0.25rem;
+}
+
+.video-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 0.5rem;
+}
+
+.video-rating {
+    display: flex;
+    align-items: center;
+}
+
+.rating-star {
+    color: #ecc94b;
+    margin-right: 0.25rem;
+}
+
+/* 星星评分系统 */
+.star-rating {
+    display: flex;
+    align-items: center;
+}
+
+.star-rating .star {
+    color: #e2e8f0; /* 默认星星颜色（空心） */
+    font-size: 0.875rem;
+    margin-right: 0.125rem;
+}
+
+.star-rating .star.filled {
+    color: #ecc94b; /* 填充星星颜色 */
+}
+
+.star-rating .star.half-filled {
+    position: relative;
+}
+
+.star-rating .star.half-filled:before {
+    content: '\f089'; /* 半星图标 */
+    font-family: 'Font Awesome 5 Free';
+    position: absolute;
+    color: #ecc94b;
+    overflow: hidden;
+    width: 50%;
+    left: 0;
+}
+
+/* 视频卡片复选框样式 */
+.video-card-checkbox {
+    position: absolute;
+    top: 0.5rem;
+    left: 0.5rem;
+    z-index: 10;
+    width: 1rem;
+    height: 1rem;
+}
+
+.video-card-checkbox {
+    position: absolute;
+    top: 0.5rem;
+    left: 0.5rem;
+    z-index: 5;
+}
+
+/* 区域E: 页脚 */
+.footer {
+    padding: 0.75rem 1rem;
+    background-color: #f9fafb;
+    border-top: 1px solid #e5e7eb;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.pagination {
+    display: flex;
+    align-items: center;
+}
+
+.page-btn {
+    width: 2rem;
+    height: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #d1d5db;
+    background-color: white;
+    margin: 0 0.25rem;
+    border-radius: 0.375rem;
+    cursor: pointer;
+}
+
+.page-btn.active {
+    background-color: #4f46e5;
+    color: white;
+    border-color: #4f46e5;
+}
+
+.page-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* 区域F: 详情抽屉 */
+.detail-drawer {
+    position: fixed;
+    top: 41px; /* 标题栏高度，确保不覆盖标题栏 */
+    right: -500px; /* 初始位置在屏幕外 */
+    width: 500px;
+    height: calc(100vh - 41px); /* 减去标题栏高度 */
+    background-color: white;
+    box-shadow: -2px 0 10px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    transition: right 0.3s ease;
+    overflow-y: auto;
+}
+
+.detail-drawer.open {
+    right: 0;
+}
+
+.detail-drawer-content {
+    padding: 20px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #e5e7eb;
+    margin-bottom: 20px;
+}
+
+.detail-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.detail-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.detail-preview-container {
+    width: 100%;
+    position: relative;
+}
+
+.detail-preview {
+    width: 100%;
+    height: 240px;
+    background-color: #f3f4f6;
+    background-size: cover;
+    background-position: center;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.change-preview-btn {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    background-color: rgba(255, 255, 255, 0.8);
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    padding: 6px 12px;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.change-preview-btn:hover {
+    background-color: white;
+}
+
+/* 恢复预览图按钮 */
+.restore-preview-btn {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    background-color: rgba(255, 255, 255, 0.8);
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    padding: 6px 12px;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.restore-preview-btn:hover {
+    background-color: white;
+    color: #ef4444; /* 红色调，表示撤销动作 */
+}
+
+.detail-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.form-group label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #4b5563;
+}
+
+.form-input, .form-textarea {
+    padding: 8px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    font-size: 1rem;
+    transition: border-color 0.2s;
+}
+
+.form-input:focus, .form-textarea:focus {
+    border-color: #4f46e5;
+    outline: none;
+}
+
+.form-textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+.rating-stars {
+    display: flex;
+    gap: 8px;
+    font-size: 1.5rem;
+    color: #d1d5db;
+}
+
+.rating-stars i {
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.rating-stars i.fas {
+    color: #facc15;
+}
+
+.rating-stars i:hover, .rating-stars i.hovered {
+    color: #fbbf24;
+}
+
+.detail-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 20px;
+}
+
+.primary-btn, .secondary-btn {
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s, transform 0.1s;
+}
+
+.primary-btn {
+    background-color: #4f46e5;
+    color: white;
+    border: none;
+}
+
+.primary-btn:hover {
+    background-color: #4338ca;
+    transform: translateY(-1px);
+}
+
+.secondary-btn {
+    background-color: white;
+    color: #4b5563;
+    border: 1px solid #d1d5db;
+}
+
+.secondary-btn:hover {
+    background-color: #f9fafb;
+    transform: translateY(-1px);
+}
+
+/* 遮罩层，用于关闭抽屉 */
+.drawer-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.3);
+    z-index: 999;
+    display: none;
+}
+
+.drawer-backdrop.visible {
+    display: block;
+}
+
+/* 设置表格行的悬停背景色 */
+.video-table tbody tr:hover {
+    background-color: #f3f4f6;
+}
+
+/* 确保所有表格行悬停时单元格背景色一致 */
+.video-table tbody tr:hover td {
+    background-color: #f3f4f6;
+}
+
+/* 固定列的单元格需要特殊处理以保持视觉连贯性 */
+.video-table td.sticky-left {
+    background-color: #ffffff; /* 默认背景色 */
+    border-right: 2px solid #e5e7eb; /* 添加右边框强调固定列 */
+    box-shadow: 1px 0 5px rgba(0, 0, 0, 0.05); /* 添加阴影效果 */
+}
+
+/* 固定列表头的特殊样式 */
+.video-table th.sticky-left {
+    border-right: 2px solid #e5e7eb;
+    box-shadow: 1px 0 5px rgba(0, 0, 0, 0.05);
+}
+
+/* 确保表格容器有正确的位置上下文 */
+.table-container {
+    position: relative;
+}
+
+/* 表格行处于选中状态时的样式 */
+.video-table tbody tr.selected td {
+    background-color: #e6f7ff;
+}
+
+/* 确保选中行的固定列也有相应的背景色 */
+.video-table tbody tr.selected td.sticky-left {
+    background-color: #e6f7ff;
+}
+
+/* 右键菜单样式 */
+.video-context-menu {
+    position: absolute;
+    background-color: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    padding: 8px 0;
+    z-index: 1000;
+    min-width: 160px;
+}
+
+.context-menu-item {
+    padding: 8px 16px;
+    cursor: pointer;
+    user-select: none;
+    font-size: 14px;
+    color: #333;
+    display: flex;
+    align-items: center;
+}
+
+.context-menu-item:hover {
+    background-color: #f3f4f6;
+}
+
+.context-menu-item i {
+    margin-right: 8px;
+    width: 16px;
+    text-align: center;
+}
+
+/* 选中行和卡片的样式 */
+.video-table tbody tr.selected td {
+    background-color: #e6f7ff;
+}
+
+.video-table tbody tr.selected td.sticky-left {
+    background-color: #e6f7ff;
+}
+
+.video-card.selected {
+    border-color: #1890ff;
+    box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+}

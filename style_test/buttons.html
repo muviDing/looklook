@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>按钮样式 - 样式测试</title>
+  <link rel="stylesheet" href="base.css">
+  <style>
+    .button-collection {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      height: 36px;
+      padding: 0 20px;
+      font-size: 14px;
+      font-weight: 500;
+      border: none;
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    /* 选项 A - 圆角填充按钮 */
+    .btn-filled {
+      background-color: var(--apple-blue);
+      color: white;
+      border-radius: var(--radius-full);
+    }
+    
+    .btn-filled:hover {
+      background-color: #0062c9;
+      transform: scale(1.05);
+    }
+    
+    .btn-filled:active {
+      transform: scale(0.98);
+    }
+    
+    /* 选项 B - 半透明毛玻璃按钮 */
+    .btn-glass {
+      background-color: rgba(255, 255, 255, 0.7);
+      color: var(--apple-blue);
+      border-radius: var(--radius-full);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .btn-glass:hover {
+      background-color: rgba(255, 255, 255, 0.9);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    
+    .btn-glass:active {
+      transform: translateY(1px);
+    }
+    
+    /* 选项 C - 描边按钮 */
+    .btn-outline {
+      background-color: transparent;
+      color: var(--apple-blue);
+      border: 1.5px solid var(--apple-blue);
+      border-radius: var(--radius-full);
+    }
+    
+    .btn-outline:hover {
+      background-color: rgba(0, 113, 227, 0.1);
+    }
+    
+    .btn-outline:active {
+      background-color: rgba(0, 113, 227, 0.2);
+    }
+    
+    /* 选项 D - 渐变按钮 */
+    .btn-gradient {
+      background: linear-gradient(135deg, var(--apple-blue) 0%, var(--apple-indigo) 100%);
+      color: white;
+      border-radius: var(--radius-full);
+      box-shadow: 0 4px 10px rgba(0, 113, 227, 0.3);
+    }
+    
+    .btn-gradient:hover {
+      background: linear-gradient(135deg, #0062c9 0%, #4e4cd4 100%);
+      box-shadow: 0 6px 12px rgba(0, 113, 227, 0.4);
+    }
+    
+    .btn-gradient:active {
+      transform: translateY(1px);
+      box-shadow: 0 2px 6px rgba(0, 113, 227, 0.4);
+    }
+    
+    /* 辅助按钮 */
+    .btn-danger {
+      background-color: var(--apple-pink);
+    }
+    
+    .btn-danger:hover {
+      background-color: #e02e55;
+    }
+    
+    .btn-success {
+      background-color: var(--apple-green);
+    }
+    
+    .btn-success:hover {
+      background-color: #25b44d;
+    }
+    
+    .btn-warning {
+      background-color: var(--apple-orange);
+    }
+    
+    .btn-warning:hover {
+      background-color: #e58e09;
+    }
+    
+    /* 按钮大小变体 */
+    .btn-sm {
+      height: 30px;
+      padding: 0 15px;
+      font-size: 12px;
+    }
+    
+    .btn-lg {
+      height: 44px;
+      padding: 0 25px;
+      font-size: 16px;
+    }
+    
+    /* 禁用按钮样式 */
+    .btn-disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .btn-disabled:hover {
+      transform: none;
+      background-color: inherit;
+    }
+    
+    /* 带图标的按钮 */
+    .btn-icon {
+      width: 36px;
+      padding: 0;
+      border-radius: 50%;
+    }
+    
+    .btn-icon-text {
+      padding-left: 15px;
+      padding-right: 20px;
+    }
+    
+    /* 动画按钮 */
+    .btn-pulse {
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .btn-pulse::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(255, 255, 255, 0.3);
+      transform: scale(0);
+      border-radius: 50%;
+      opacity: 0;
+    }
+    
+    .btn-pulse:active::after {
+      transform: scale(2.5);
+      opacity: 0;
+      transition: all 0.6s ease-out;
+    }
+    
+    /* 示例背景 */
+    .demo-bg {
+      background-image: url('https://images.unsplash.com/photo-1557682250-75829f8d76d5?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80');
+      background-size: cover;
+      background-position: center;
+      padding: 30px;
+      border-radius: var(--radius-lg);
+      margin-bottom: 30px;
+    }
+    
+    /* 按钮组 */
+    .btn-group {
+      display: inline-flex;
+      border-radius: var(--radius-full);
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+    }
+    
+    .btn-group .btn {
+      border-radius: 0;
+      height: 40px;
+    }
+    
+    .btn-group .btn:not(:last-child) {
+      border-right: 1px solid rgba(0, 0, 0, 0.1);
+    }
+    
+    .btn-group .btn:first-child {
+      border-top-left-radius: var(--radius-full);
+      border-bottom-left-radius: var(--radius-full);
+    }
+    
+    .btn-group .btn:last-child {
+      border-top-right-radius: var(--radius-full);
+      border-bottom-right-radius: var(--radius-full);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>按钮样式选择</h1>
+    
+    <div class="style-grid">
+      <!-- 选项 A - 圆角填充按钮 -->
+      <div class="style-option">
+        <div class="option-header">选项 A：圆角填充按钮</div>
+        <div class="option-content">
+          <div class="button-collection">
+            <button class="btn btn-filled">导入视频</button>
+            <button class="btn btn-filled btn-danger">删除</button>
+            <button class="btn btn-filled btn-success">保存</button>
+            <button class="btn btn-filled btn-warning">编辑</button>
+          </div>
+          <div class="button-collection">
+            <button class="btn btn-filled btn-sm">小按钮</button>
+            <button class="btn btn-filled">中按钮</button>
+            <button class="btn btn-filled btn-lg">大按钮</button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 选项 B - 半透明毛玻璃按钮 -->
+      <div class="style-option">
+        <div class="option-header">选项 B：毛玻璃按钮</div>
+        <div class="option-content demo-bg">
+          <div class="button-collection">
+            <button class="btn btn-glass">导入视频</button>
+            <button class="btn btn-glass" style="color: var(--apple-pink);">删除</button>
+            <button class="btn btn-glass" style="color: var(--apple-green);">保存</button>
+            <button class="btn btn-glass" style="color: var(--apple-orange);">编辑</button>
+          </div>
+          <div class="button-collection">
+            <button class="btn btn-glass btn-sm">小按钮</button>
+            <button class="btn btn-glass">中按钮</button>
+            <button class="btn btn-glass btn-lg">大按钮</button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 选项 C - 描边按钮 -->
+      <div class="style-option">
+        <div class="option-header">选项 C：描边按钮</div>
+        <div class="option-content">
+          <div class="button-collection">
+            <button class="btn btn-outline">导入视频</button>
+            <button class="btn btn-outline" style="color: var(--apple-pink); border-color: var(--apple-pink);">删除</button>
+            <button class="btn btn-outline" style="color: var(--apple-green); border-color: var(--apple-green);">保存</button>
+            <button class="btn btn-outline" style="color: var(--apple-orange); border-color: var(--apple-orange);">编辑</button>
+          </div>
+          <div class="button-collection">
+            <button class="btn btn-outline btn-sm">小按钮</button>
+            <button class="btn btn-outline">中按钮</button>
+            <button class="btn btn-outline btn-lg">大按钮</button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 选项 D - 渐变按钮 -->
+      <div class="style-option">
+        <div class="option-header">选项 D：渐变按钮</div>
+        <div class="option-content">
+          <div class="button-collection">
+            <button class="btn btn-gradient">导入视频</button>
+            <button class="btn btn-gradient" style="background: linear-gradient(135deg, var(--apple-pink) 0%, #ff6b8b 100%);">删除</button>
+            <button class="btn btn-gradient" style="background: linear-gradient(135deg, var(--apple-green) 0%, #5ce37d 100%);">保存</button>
+            <button class="btn btn-gradient" style="background: linear-gradient(135deg, var(--apple-orange) 0%, #ffbd5c 100%);">编辑</button>
+          </div>
+          <div class="button-collection">
+            <button class="btn btn-gradient btn-sm">小按钮</button>
+            <button class="btn btn-gradient">中按钮</button>
+            <button class="btn btn-gradient btn-lg">大按钮</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <h2>按钮交互效果</h2>
+    
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px;">
+      <!-- 涟漪动画效果 -->
+      <div>
+        <div style="margin-bottom: 10px; font-weight: 500;">涟漪效果</div>
+        <button class="btn btn-filled btn-pulse">点击查看涟漪</button>
+      </div>
+      
+      <!-- 带图标按钮 -->
+      <div>
+        <div style="margin-bottom: 10px; font-weight: 500;">带图标按钮</div>
+        <button class="btn btn-filled btn-icon-text">
+          <span style="font-size: 16px;">+</span>
+          <span>添加视频</span>
+        </button>
+      </div>
+      
+      <!-- 按钮组 -->
+      <div>
+        <div style="margin-bottom: 10px; font-weight: 500;">按钮组</div>
+        <div class="btn-group">
+          <button class="btn btn-filled">全部</button>
+          <button class="btn btn-filled">收藏</button>
+          <button class="btn btn-filled">最近</button>
+        </div>
+      </div>
+      
+      <!-- 禁用状态 -->
+      <div>
+        <div style="margin-bottom: 10px; font-weight: 500;">禁用状态</div>
+        <button class="btn btn-filled btn-disabled">禁用按钮</button>
+      </div>
+    </div>
+    
+    <a href="index.html" class="back-link">返回主菜单</a>
+  </div>
+</body>
+</html> 

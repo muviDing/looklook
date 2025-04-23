@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>视频管理器 - 样式测试</title>
+  <link rel="stylesheet" href="base.css">
+  <style>
+    .test-link {
+      display: block;
+      background: var(--white);
+      padding: 20px;
+      border-radius: var(--radius-lg);
+      margin-bottom: 15px;
+      text-decoration: none;
+      color: var(--dark-gray);
+      font-weight: 500;
+      box-shadow: var(--shadow-md);
+      transition: all 0.3s ease;
+    }
+    
+    .test-link:hover {
+      transform: translateX(10px);
+      box-shadow: var(--shadow-lg);
+      background-color: var(--apple-blue);
+      color: var(--white);
+    }
+    
+    .test-description {
+      color: var(--mid-gray);
+      font-size: 14px;
+      margin-top: 5px;
+    }
+    
+    .test-link:hover .test-description {
+      color: rgba(255, 255, 255, 0.8);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>视频管理器样式测试</h1>
+    
+    <p style="text-align: center; max-width: 600px; margin: 0 auto 40px; color: var(--mid-gray);">
+      请点击以下链接查看不同的样式选项，并选择您最喜欢的风格。每个页面都会展示多种选项供您比较。
+    </p>
+    
+    <div style="max-width: 600px; margin: 0 auto;">
+      <a href="color-scheme.html" class="test-link">
+        1. 颜色方案
+        <div class="test-description">浅色、深色和混合主题选项</div>
+      </a>
+      
+      <a href="glass-effect.html" class="test-link">
+        2. 玻璃质感效果
+        <div class="test-description">不同级别的毛玻璃效果和应用位置</div>
+      </a>
+      
+      <a href="card-design.html" class="test-link">
+        3. 卡片设计
+        <div class="test-description">视频卡片的不同风格选项</div>
+      </a>
+      
+      <a href="buttons.html" class="test-link">
+        4. 按钮样式
+        <div class="test-description">各种按钮设计和交互效果</div>
+      </a>
+      
+      <a href="modals.html" class="test-link">
+        5. 弹窗设计
+        <div class="test-description">确认弹窗和提示框的风格</div>
+      </a>
+      
+      <a href="combined-preview.html" class="test-link">
+        6. 综合预览
+        <div class="test-description">基于您的选择的最终设计预览</div>
+      </a>
+    </div>
+  </div>
+</body>
+</html> 

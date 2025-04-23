@@ -1,0 +1,323 @@
+/**
+ * 蓝色主题 - 视频管理器
+ * 风格优化，保留原有布局结构
+ */
+
+:root {
+  /* 蓝色主题颜色变量 */
+  --primary: #2563eb;
+  --primary-light: #3b82f6;
+  --primary-dark: #1d4ed8;
+  --primary-hover: #1d4ed8;
+  --primary-active: #1e40af;
+  --primary-transparent: rgba(37, 99, 235, 0.1);
+  
+  /* 辅助色 */
+  --secondary: #38bdf8;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --info: #6366f1;
+  
+  /* 中性色 */
+  --text-primary: #1f2937;
+  --text-secondary: #4b5563;
+  --text-tertiary: #6b7280;
+  --text-light: #9ca3af;
+  --text-on-primary: #ffffff;
+  
+  /* 背景色 */
+  --bg-main: #ffffff;
+  --bg-secondary: #f9fafb;
+  --bg-tertiary: #f3f4f6;
+  --bg-quaternary: #e5e7eb;
+  
+  /* 边框和阴影 */
+  --border-color: #e5e7eb;
+  --border-color-hover: #d1d5db;
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-hover: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  
+  /* 圆角 */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  
+  /* 动画时间 */
+  --transition-fast: 150ms;
+  --transition-normal: 300ms;
+  --transition-slow: 500ms;
+}
+
+/* 应用蓝色主题到应用 */
+.blue-theme {
+  /* 区域A: 标题栏 */
+  & .title-bar {
+    background-color: var(--primary);
+    color: var(--text-on-primary);
+    box-shadow: var(--shadow-sm);
+    transition: background-color var(--transition-normal);
+  }
+  
+  & .window-controls button:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+    transition: background-color var(--transition-fast);
+  }
+  
+  /* 区域B: 搜索和筛选 */
+  & .search-filter-bar {
+    border-bottom: 1px solid var(--border-color);
+    background-color: var(--bg-main);
+  }
+  
+  & .search-box input {
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  }
+  
+  & .search-box input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-transparent);
+    outline: none;
+  }
+  
+  & .filter-btn {
+    transition: background-color var(--transition-fast);
+  }
+  
+  & .filter-btn:hover {
+    background-color: var(--bg-tertiary);
+  }
+  
+  /* 区域C: 功能按钮 */
+  & .function-bar {
+    background-color: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+  }
+  
+  & .import-btn {
+    background-color: var(--primary);
+    transition: background-color var(--transition-fast);
+  }
+  
+  & .import-btn:hover {
+    background-color: var(--primary-hover);
+  }
+  
+  & .batch-actions {
+    transition: opacity var(--transition-normal), transform var(--transition-normal);
+  }
+  
+  & .batch-buttons button {
+    transition: background-color var(--transition-fast);
+  }
+  
+  & .batch-buttons button:hover {
+    background-color: var(--bg-tertiary);
+  }
+  
+  & .view-toggle-buttons button {
+    transition: background-color var(--transition-fast);
+  }
+  
+  & .view-toggle-buttons button:hover {
+    background-color: var(--bg-tertiary);
+  }
+  
+  /* 区域D: 视频列表 - 表格样式 */
+  & .table-container {
+    background-color: var(--bg-main);
+  }
+  
+  & .video-table th {
+    background-color: var(--bg-secondary);
+    color: var(--text-secondary);
+    font-weight: 600;
+  }
+  
+  & .video-table tr {
+    transition: background-color var(--transition-fast);
+  }
+  
+  & .video-table tr:hover {
+    background-color: var(--bg-tertiary);
+  }
+  
+  & .video-table td {
+    border-bottom: 1px solid var(--border-color);
+  }
+  
+  /* 区域D: 视频列表 - 画廊视图 */
+  & .video-card {
+    background-color: var(--bg-main);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+    transition: transform var(--transition-normal), box-shadow var(--transition-normal), border-color var(--transition-normal);
+    overflow: hidden;
+    position: relative;
+    border: 1px solid transparent;
+  }
+  
+  & .video-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+    border-color: var(--primary-light);
+  }
+  
+  & .video-thumbnail {
+    position: relative;
+    transition: transform var(--transition-normal);
+    overflow: hidden;
+  }
+  
+  & .video-card:hover .video-thumbnail::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle, transparent 50%, rgba(59, 130, 246, 0.1) 100%);
+  }
+  
+  & .video-info {
+    padding: 0.75rem;
+    border-top: 1px solid var(--border-color);
+    position: relative;
+    z-index: 1;
+  }
+  
+  & .video-info::before {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 0;
+    background-color: rgba(219, 234, 254, 0.2);
+    transition: height var(--transition-normal);
+    z-index: -1;
+  }
+  
+  & .video-card:hover .video-info::before {
+    height: 100%;
+  }
+  
+  & .video-title {
+    color: var(--text-primary);
+    font-weight: 500;
+  }
+  
+  & .video-actors {
+    color: var(--text-secondary);
+  }
+  
+  & .video-actions {
+    opacity: 0;
+    transition: opacity var(--transition-fast);
+  }
+  
+  & .video-card:hover .video-actions {
+    opacity: 1;
+  }
+  
+  & .action-btn {
+    background-color: var(--primary);
+    color: var(--text-on-primary);
+    border-radius: var(--radius-md);
+    transition: background-color var(--transition-fast), transform var(--transition-fast);
+  }
+  
+  & .action-btn:hover {
+    background-color: var(--primary-hover);
+    transform: scale(1.05);
+  }
+  
+  /* 星级评分 */
+  & .star-rating .star {
+    color: #d1d5db;
+  }
+  
+  & .star-rating .star.filled {
+    color: var(--secondary);
+  }
+  
+  & .star-rating .star.half-filled {
+    background: linear-gradient(90deg, var(--secondary) 50%, #d1d5db 50%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  
+  /* 复选框样式 */
+  & .video-card-checkbox {
+    border: 2px solid rgba(255, 255, 255, 0.8);
+    box-shadow: 0 0 3px rgba(0, 0, 0, 0.2);
+  }
+  
+  & .video-card-checkbox:checked {
+    background-color: var(--primary);
+  }
+  
+  /* 区域E: 页脚 */
+  & .footer {
+    background-color: var(--bg-secondary);
+    border-top: 1px solid var(--border-color);
+  }
+  
+  & .pagination .page-btn {
+    background-color: var(--bg-tertiary);
+    border-radius: var(--radius-md);
+    transition: all var(--transition-fast);
+  }
+  
+  & .pagination .page-btn:hover:not(:disabled) {
+    background-color: var(--bg-quaternary);
+    transform: translateY(-2px);
+  }
+  
+  & .pagination .page-btn.active {
+    background-color: var(--primary);
+    color: var(--text-on-primary);
+  }
+  
+  & select, & input[type="number"] {
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  }
+  
+  & select:focus, & input[type="number"]:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-transparent);
+    outline: none;
+  }
+  
+  /* 滚动条美化 */
+  & ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  
+  & ::-webkit-scrollbar-track {
+    background: var(--bg-secondary);
+  }
+  
+  & ::-webkit-scrollbar-thumb {
+    background-color: var(--text-light);
+    border-radius: 4px;
+  }
+  
+  & ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--text-tertiary);
+  }
+}
+
+/* 添加微弱的图案背景，增加设计感 */
+.blue-theme.with-pattern {
+  background-image: 
+    radial-gradient(var(--primary-transparent) 1px, transparent 1px),
+    radial-gradient(var(--primary-transparent) 1px, transparent 1px);
+  background-size: 40px 40px;
+  background-position: 0 0, 20px 20px;
+} 

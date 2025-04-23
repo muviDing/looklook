@@ -1,0 +1,94 @@
+/**
+ * 通用样式和变量
+ * 包含整个应用共用的基础样式和CSS变量
+ */
+
+:root {
+    /* 颜色变量 */
+    --primary-color: #4f46e5;
+    --primary-hover: #4338ca;
+    --secondary-color: #f9fafb;
+    --text-primary: #1a202c;
+    --text-secondary: #4a5568;
+    --text-muted: #718096;
+    --border-color: #e5e7eb;
+    --background-light: #ffffff;
+    --background-gray: #f5f7fa;
+    
+    /* 尺寸变量 */
+    --spacing-xs: 0.25rem;
+    --spacing-sm: 0.5rem;
+    --spacing-md: 0.75rem;
+    --spacing-lg: 1rem;
+    --spacing-xl: 1.5rem;
+    
+    /* 边框和阴影 */
+    --border-radius-sm: 0.25rem;
+    --border-radius-md: 0.375rem;
+    --border-radius-lg: 0.5rem;
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* 基础样式重置 */
+body {
+    background-color: var(--background-gray);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    overflow: hidden;
+    margin: 0;
+    padding: 0;
+}
+
+/* 整体应用容器 */
+.app-container {
+    width: 100%; /* 适应Electron窗口 */
+    height: 100vh; /* 适应Electron窗口 */
+    margin: 0;
+    overflow: hidden;
+    position: relative;
+    background-color: var(--background-light);
+    display: flex;
+    flex-direction: column;
+    border-radius: 0; /* 桌面应用不需要圆角 */
+    box-shadow: none; /* 桌面应用不需要阴影 */
+}
+
+/* 通用按钮样式 */
+button {
+    cursor: pointer;
+    border: none;
+    outline: none;
+}
+
+button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* 通用输入框样式 */
+input {
+    outline: none;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-md);
+    padding: var(--spacing-sm) var(--spacing-md);
+}
+
+input:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2);
+}
+
+/* 通用下拉菜单样式 */
+select {
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-md);
+    padding: var(--spacing-sm) var(--spacing-md);
+    background-color: white;
+    cursor: pointer;
+}
+
+/* 通用隐藏类 */
+.hidden {
+    display: none !important;
+}

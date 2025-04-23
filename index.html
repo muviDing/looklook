@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>早该看看了 - 本地视频管理工具</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="css/layout.css">
+    <link rel="stylesheet" href="css/importProgress.css">
+    <link rel="stylesheet" href="css/tableView.css">
+    <link rel="stylesheet" href="css/detailDrawer.css">
+    <style>
+        body {
+            background-color: #f5f7fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+        }
+        /* 移除app-container的内联样式，使用layout.css中的样式 */
+        /* 区域A: 标题栏 - 使用layout.css中的样式 */
+        /* 移除标题栏的内联样式，使用layout.css中的样式 */
+        /* 移除窗口控制按钮的内联样式，使用layout.css中的样式 */
+        /* 移除hover效果的内联样式，使用layout.css中的样式 */
+        /* 区域B: 搜索和筛选 - 使用layout.css中的样式 */
+        /* 移除搜索和筛选区域的内联样式，使用layout.css中的样式 */
+        /* 区域C: 功能按钮 - 使用layout.css中的样式 */
+        /* 移除功能按钮区域的内联样式，使用layout.css中的样式 */
+        /* 区域D: 视频列表 - 使用layout.css中的样式 */
+        /* 移除视频列表区域的内联样式，使用layout.css中的样式 */
+        /* 移除视图切换按钮的内联样式，使用layout.css中的样式 */
+        /* 移除视频网格和表格的内联样式，使用layout.css中的样式 */
+        /* 移除视频卡片相关的内联样式，使用layout.css中的样式 */
+        /* 区域E: 页脚 - 使用layout.css中的样式 */
+        /* 移除页脚区域的内联样式，使用layout.css中的样式 */
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- 区域A: 标题栏 -->
+        <div class="title-bar">
+            <div class="title">
+                <h1 class="text-xl font-bold">早该看看了</h1>
+            </div>
+            <div class="window-controls">
+                <button id="settings-btn" title="设置">
+                    <i class="fas fa-cog"></i>
+                </button>
+                <button id="minimize-btn" title="最小化">
+                    <i class="fas fa-window-minimize"></i>
+                </button>
+                <button id="maximize-btn" title="最大化">
+                    <i class="fas fa-window-maximize"></i>
+                </button>
+                <button id="close-btn" title="关闭">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- 区域B: 搜索和筛选 -->
+        <div class="search-filter-bar">
+            <div class="search-box mr-4">
+                <i class="fas fa-search"></i>
+                <input type="text" placeholder="搜索视频..." class="search-input">
+            </div>
+            <button class="filter-btn px-3 py-1.5 bg-gray-100 hover:bg-gray-200 rounded-md flex items-center">
+                <i class="fas fa-filter mr-2"></i>
+                筛选
+            </button>
+        </div>
+
+        <!-- 区域C: 功能按钮 -->
+        <div class="function-bar">
+            <div class="left-actions">
+                <button class="import-btn px-3 py-1.5 bg-indigo-600 text-white rounded-md hover:bg-indigo-700">
+                    <i class="fas fa-file-import mr-2"></i>
+                    导入视频
+                </button>
+            </div>
+            
+            <div class="batch-actions" id="batch-actions">
+                <div class="selection-controls mr-4">
+                    <button class="select-all-btn px-2 py-1 text-sm text-gray-600 hover:text-gray-800">
+                        全选
+                    </button>
+                    <button class="invert-selection-btn px-2 py-1 text-sm text-gray-600 hover:text-gray-800">
+                        反选
+                    </button>
+                    <span class="selected-count ml-2 text-sm text-gray-500">
+                        已选择 <span id="selected-count">0</span> 项
+                    </span>
+                </div>
+                <div class="batch-buttons">
+                    <button class="batch-move-btn px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded-md mr-2">
+                        <i class="fas fa-folder-open mr-1"></i>
+                        移动到
+                    </button>
+                    <button class="batch-hide-btn px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded-md mr-2">
+                        <i class="fas fa-eye-slash mr-1"></i>
+                        隐藏
+                    </button>
+                    <button class="batch-remove-btn px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded-md">
+                        <i class="fas fa-trash-alt mr-1"></i>
+                        移除
+                    </button>
+                </div>
+            </div>
+            
+            <div class="view-toggle">
+                <!-- 视图切换按钮将由JavaScript动态生成 -->
+            </div>
+        </div>
+
+        <!-- 区域D: 视频列表 -->
+        <div class="video-list-container">
+            <!-- 表格视图 -->
+            <div class="table-container">
+                <table class="video-table" id="video-table">
+                    <thead>
+                        <tr>
+                            <th class="sticky-left checkbox-cell column-checkbox" width="40px">
+                                <input type="checkbox" id="select-all-table">
+                            </th>
+                            <th class="column-filename" width="200px">文件名</th>
+                            <th class="column-code" width="120px">番号</th>
+                            <th class="column-collection" width="150px">合集</th>
+                            <th class="column-actors" width="150px">演员</th>
+                            <th class="column-resolution" width="100px">分辨率</th>
+                            <th class="column-rating" width="80px">评分</th>
+                            <th class="column-viewcount" width="100px">观看次数</th>
+                            <th class="column-lastview" width="150px">最后观看时间</th>
+                            <th class="column-notes" width="200px">备注</th>
+                            <th class="column-filepath" width="250px">文件路径</th>
+                            <th class="column-filesize" width="100px">文件大小</th>
+                            <th class="column-createdate" width="150px">文件创建时间</th>
+                            <th class="column-importdate" width="150px">导入时间</th>
+                            <th class="column-releasedate" width="120px">上映时间</th>
+                        </tr>
+                    </thead>
+                <tbody>
+                    <!-- 视频数据将通过JavaScript动态填充 -->
+                </tbody>
+                </table>
+            </div>
+
+            <!-- 画廊视图 (默认隐藏) -->
+            <div class="video-grid hidden" id="video-grid">
+                <!-- 视频数据将通过JavaScript动态填充 -->
+            </div>
+        </div>
+
+        <!-- 区域F: 详情抽屉 -->
+        <div class="detail-drawer" id="detail-drawer">
+            <div class="detail-drawer-content">
+                <div class="detail-body">
+                    <!-- F-1: 查看视图 -->
+                    <div class="detail-view-mode active" id="detail-view-mode">
+                        <!-- 模块1: 基础信息 -->
+                        <div class="info-section">
+                            <h3 class="info-section-title">基础信息</h3>
+                            
+                            <!-- 预览图放入基础信息模块内 -->
+                            <div class="detail-preview-container">
+                                <div class="detail-preview" id="detail-preview"></div>
+                                <div class="preview-controls">
+                                    <!-- 预览控制区域为空 -->
+                                </div>
+                            </div>
+                            
+                            <div class="info-grid">
+                                <div class="info-label">番号</div>
+                                <div class="info-value" id="view-code">-</div>
+                                
+                                <div class="info-label">合集</div>
+                                <div class="info-value" id="view-collection">-</div>
+                                
+                                <div class="info-label">演员</div>
+                                <div class="info-value" id="view-actors">-</div>
+                                
+                                <div class="info-label">上映时间</div>
+                                <div class="info-value" id="view-releasedate">-</div>
+                                
+                                <div class="info-label">评分</div>
+                                <div class="info-value">
+                                    <div class="view-rating" id="view-rating"></div>
+                                </div>
+                            </div>
+                            
+                            <div class="info-section-subtitle">备注</div>
+                            <div class="view-notes" id="view-notes">-</div>
+                        </div>
+                        
+                        <!-- 模块2: 文件信息 -->
+                        <div class="info-section">
+                            <h3 class="info-section-title">文件信息</h3>
+                            <div class="info-grid">
+                                <div class="info-label">文件名</div>
+                                <div class="info-value" id="view-filename">-</div>
+                                
+                                <div class="info-label">文件路径</div>
+                                <div class="info-value" id="view-filepath">-</div>
+                                
+                                <div class="info-label">文件大小</div>
+                                <div class="info-value" id="view-filesize">-</div>
+                                
+                                <div class="info-label">分辨率</div>
+                                <div class="info-value" id="view-resolution">-</div>
+                                
+                                <div class="info-label">创建时间</div>
+                                <div class="info-value" id="view-createdate">-</div>
+                                
+                                <div class="info-label">导入时间</div>
+                                <div class="info-value" id="view-importdate">-</div>
+                            </div>
+                        </div>
+                        
+                        <!-- 模块3: 观看统计 -->
+                        <div class="info-section">
+                            <h3 class="info-section-title">观看统计</h3>
+                            <div class="info-grid">
+                                <div class="info-label">观看次数</div>
+                                <div class="info-value" id="view-viewcount">-</div>
+                                
+                                <div class="info-label">最后观看</div>
+                                <div class="info-value" id="view-lastview">-</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- F-2: 编辑视图 -->
+                    <div class="detail-edit-mode" id="detail-edit-mode">
+                        <!-- 模块1: 基础信息 (可编辑) -->
+                        <div class="info-section">
+                            <h3 class="info-section-title">基础信息</h3>
+                            
+                            <!-- 预览图在编辑模式下也放入基础信息模块内 -->
+                            <div class="detail-preview-container">
+                                <div class="detail-preview" id="detail-preview-edit"></div>
+                                <div class="preview-controls">
+                                    <button class="change-preview-btn" id="change-preview-btn-edit">
+                                        <i class="fas fa-image"></i> 更换预览图
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="detail-code">番号</label>
+                                <input type="text" id="detail-code" class="form-input">
+                            </div>
+                            <div class="form-group">
+                                <label for="detail-collection">合集</label>
+                                <input type="text" id="detail-collection" class="form-input">
+                            </div>
+                            <div class="form-group">
+                                <label for="detail-actors">演员</label>
+                                <input type="text" id="detail-actors" class="form-input">
+                            </div>
+                            <div class="form-group">
+                                <label for="detail-releasedate">上映时间</label>
+                                <input type="date" id="detail-releasedate" class="form-input">
+                            </div>
+                            <div class="form-group">
+                                <label>评分</label>
+                                <div class="rating-stars" id="detail-rating">
+                                    <i class="far fa-star" data-value="1"></i>
+                                    <i class="far fa-star" data-value="2"></i>
+                                    <i class="far fa-star" data-value="3"></i>
+                                    <i class="far fa-star" data-value="4"></i>
+                                    <i class="far fa-star" data-value="5"></i>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="detail-notes">备注</label>
+                                <textarea id="detail-notes" class="form-textarea" rows="4"></textarea>
+                            </div>
+                        </div>
+                        
+                        <!-- 模块2: 文件信息 (只读) -->
+                        <div class="info-section">
+                            <h3 class="info-section-title">文件信息</h3>
+                            <div class="info-grid">
+                                <div class="info-label">文件名</div>
+                                <div class="info-value" id="edit-view-filename">-</div>
+                                
+                                <div class="info-label">文件路径</div>
+                                <div class="info-value" id="edit-view-filepath">-</div>
+                                
+                                <div class="info-label">文件大小</div>
+                                <div class="info-value" id="edit-view-filesize">-</div>
+                                
+                                <div class="info-label">分辨率</div>
+                                <div class="info-value" id="edit-view-resolution">-</div>
+                                
+                                <div class="info-label">创建时间</div>
+                                <div class="info-value" id="edit-view-createdate">-</div>
+                                
+                                <div class="info-label">导入时间</div>
+                                <div class="info-value" id="edit-view-importdate">-</div>
+                            </div>
+                        </div>
+                        
+                        <!-- 模块3: 观看统计 (只读) -->
+                        <div class="info-section">
+                            <h3 class="info-section-title">观看统计</h3>
+                            <div class="info-grid">
+                                <div class="info-label">观看次数</div>
+                                <div class="info-value" id="edit-view-viewcount">-</div>
+                                
+                                <div class="info-label">最后观看</div>
+                                <div class="info-value" id="edit-view-lastview">-</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 添加固定在底部的操作按钮栏 -->
+                <div class="drawer-footer" id="drawer-footer">
+                    <!-- 查看模式下的按钮 -->
+                    <div class="view-actions" id="view-footer-actions">
+                        <button class="secondary-btn" id="play-video-btn">
+                            <i class="fas fa-play mr-2"></i> 播放视频
+                        </button>
+                        <button class="primary-btn" id="view-edit-btn">
+                            <i class="fas fa-edit mr-2"></i> 编辑
+                        </button>
+                    </div>
+                    
+                    <!-- 编辑模式下的按钮 -->
+                    <div class="edit-actions" id="edit-footer-actions" style="display: none;">
+                        <button class="secondary-btn" id="cancel-edit-btn">取消</button>
+                        <button class="primary-btn" id="save-btn">保存更改</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 区域E: 页脚 -->
+        <div class="footer">
+            <div class="video-count">
+                共 <span id="total-count">0</span> 个视频
+            </div>
+            <div class="flex items-center">
+                <div class="page-size-selector">
+                    <select class="border rounded px-2 py-1 text-sm">
+                        <option value="20">20条/页</option>
+                        <option value="50">50条/页</option>
+                        <option value="100">100条/页</option>
+                    </select>
+                </div>
+                <div class="pagination ml-4">
+                    <!-- 分页按钮将通过JavaScript动态生成 -->
+                </div>
+                <div class="page-jump ml-4 flex items-center">
+                    <span class="text-sm mr-2">跳至</span>
+                    <input type="number" min="1" value="1" class="w-12 border rounded px-2 py-1 text-sm">
+                    <span class="text-sm ml-2">页</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 窗口控制按钮事件通过main.js处理，使用electronAPI -->
+    <script type="module" src="js/main.js"></script>
+    <!-- importProgress.js 将按需导入 -->
+</body>
+</html>

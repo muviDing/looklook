@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>玻璃质感效果 - 样式测试</title>
+  <link rel="stylesheet" href="base.css">
+  <style>
+    body {
+      background-image: url('https://images.unsplash.com/photo-1557682250-75829f8d76d5?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80');
+      background-size: cover;
+      background-attachment: fixed;
+      background-position: center;
+    }
+    
+    .glass-container {
+      background-color: rgba(255, 255, 255, 0.7);
+      border-radius: var(--radius-lg);
+      padding: 30px;
+      box-shadow: var(--shadow-md);
+    }
+    
+    .glass-panel {
+      width: 100%;
+      height: 150px;
+      border-radius: var(--radius-md);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      padding: 20px;
+      color: var(--dark-gray);
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    
+    /* 选项 A - 轻微玻璃效果 */
+    .glass-light {
+      background-color: rgba(255, 255, 255, 0.5);
+      backdrop-filter: blur(5px);
+      -webkit-backdrop-filter: blur(5px);
+    }
+    
+    /* 选项 B - 中等玻璃效果 */
+    .glass-medium {
+      background-color: rgba(255, 255, 255, 0.4);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+    
+    /* 选项 C - 强烈玻璃效果 */
+    .glass-heavy {
+      background-color: rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+    
+    /* 选项 D - 彩色玻璃效果 */
+    .glass-color {
+      background-color: rgba(100, 210, 255, 0.2);
+      backdrop-filter: blur(10px) saturate(180%);
+      -webkit-backdrop-filter: blur(10px) saturate(180%);
+      border: 1px solid rgba(100, 210, 255, 0.3);
+    }
+    
+    .glass-title {
+      font-size: 16px;
+      font-weight: 500;
+      margin-bottom: 6px;
+    }
+    
+    .glass-text {
+      font-size: 13px;
+      line-height: 1.4;
+      max-width: 90%;
+    }
+    
+    .glass-btn {
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      background-color: var(--apple-blue);
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      border-radius: var(--radius-full);
+      font-size: 12px;
+      cursor: pointer;
+    }
+    
+    .demo-ui {
+      width: 100%;
+      height: 240px;
+      background-color: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(15px);
+      -webkit-backdrop-filter: blur(15px);
+      border-radius: var(--radius-lg);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      box-shadow: var(--shadow-md);
+      padding: 15px;
+      margin-top: 30px;
+      overflow: hidden;
+    }
+    
+    .demo-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+      padding-bottom: 10px;
+    }
+    
+    .demo-tabs {
+      display: flex;
+      gap: 15px;
+    }
+    
+    .demo-tab {
+      padding: 5px 10px;
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      cursor: pointer;
+    }
+    
+    .demo-tab.active {
+      background-color: var(--apple-blue);
+      color: white;
+    }
+    
+    .demo-cards {
+      display: flex;
+      gap: 10px;
+      overflow-x: auto;
+      padding-bottom: 10px;
+    }
+    
+    .demo-card {
+      flex: 0 0 120px;
+      height: 150px;
+      border-radius: var(--radius-md);
+      background-color: rgba(255, 255, 255, 0.5);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .demo-card-img {
+      height: 80px;
+      background-color: #ddd;
+      border-radius: var(--radius-sm);
+      margin-bottom: 8px;
+    }
+    
+    .demo-card-title {
+      font-size: 12px;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    
+    .demo-card-info {
+      font-size: 10px;
+      color: var(--mid-gray);
+      margin-top: 3px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container glass-container">
+    <h1>玻璃质感效果选择</h1>
+    
+    <div class="style-grid">
+      <!-- 选项 A - 轻微玻璃效果 -->
+      <div class="style-option">
+        <div class="option-header">选项 A：轻微玻璃效果</div>
+        <div class="option-content">
+          <div class="glass-panel glass-light">
+            <div class="glass-title">轻微毛玻璃效果</div>
+            <div class="glass-text">这是一种轻微的毛玻璃效果，透明度较高，模糊度较低。适合作为背景或次要元素使用。</div>
+            <button class="glass-btn">查看</button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 选项 B - 中等玻璃效果 -->
+      <div class="style-option">
+        <div class="option-header">选项 B：中等玻璃效果</div>
+        <div class="option-content">
+          <div class="glass-panel glass-medium">
+            <div class="glass-title">中等毛玻璃效果</div>
+            <div class="glass-text">这是一种平衡的毛玻璃效果，既有足够的透明度也有明显的模糊效果。适合主要UI元素。</div>
+            <button class="glass-btn">查看</button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 选项 C - 强烈玻璃效果 -->
+      <div class="style-option">
+        <div class="option-header">选项 C：强烈玻璃效果</div>
+        <div class="option-content">
+          <div class="glass-panel glass-heavy">
+            <div class="glass-title">强烈毛玻璃效果</div>
+            <div class="glass-text">这是一种较强的毛玻璃效果，透明度较低，模糊度高。适合需要突出内容的卡片或面板。</div>
+            <button class="glass-btn">查看</button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- 选项 D - 彩色玻璃效果 -->
+      <div class="style-option">
+        <div class="option-header">选项 D：彩色玻璃效果</div>
+        <div class="option-content">
+          <div class="glass-panel glass-color">
+            <div class="glass-title">彩色毛玻璃效果</div>
+            <div class="glass-text">这是一种带有彩色的毛玻璃效果，增加了颜色饱和度。适合用于强调或突出特殊区域。</div>
+            <button class="glass-btn">查看</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <h2>应用示例 - 视频卡片画廊</h2>
+    
+    <div class="demo-ui">
+      <div class="demo-header">
+        <div class="demo-tabs">
+          <div class="demo-tab active">全部</div>
+          <div class="demo-tab">最近</div>
+          <div class="demo-tab">收藏</div>
+        </div>
+        <button style="background-color: var(--apple-blue); color: white; border: none; padding: 5px 12px; border-radius: var(--radius-full); font-size: 12px;">导入</button>
+      </div>
+      
+      <div class="demo-cards">
+        <div class="demo-card">
+          <div class="demo-card-img"></div>
+          <div class="demo-card-title">示例视频1.mp4</div>
+          <div class="demo-card-info">1080p · 2.5GB</div>
+        </div>
+        <div class="demo-card">
+          <div class="demo-card-img"></div>
+          <div class="demo-card-title">示例视频2.mp4</div>
+          <div class="demo-card-info">720p · 1.2GB</div>
+        </div>
+        <div class="demo-card">
+          <div class="demo-card-img"></div>
+          <div class="demo-card-title">示例视频3.mp4</div>
+          <div class="demo-card-info">480p · 0.8GB</div>
+        </div>
+        <div class="demo-card">
+          <div class="demo-card-img"></div>
+          <div class="demo-card-title">示例视频4.mp4</div>
+          <div class="demo-card-info">4K · 5.7GB</div>
+        </div>
+        <div class="demo-card">
+          <div class="demo-card-img"></div>
+          <div class="demo-card-title">示例视频5.mp4</div>
+          <div class="demo-card-info">1080p · 3.1GB</div>
+        </div>
+      </div>
+    </div>
+    
+    <a href="index.html" class="back-link">返回主菜单</a>
+  </div>
+</body>
+</html> 
