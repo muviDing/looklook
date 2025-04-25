@@ -86,25 +86,6 @@ async function batchMove() {
     alert(`即将移动当前页选中的 ${selectedVideos.length} 个视频记录`);
 }
 
-// 批量隐藏功能
-async function batchHide() {
-    // 获取当前页的范围
-    const startIndex = (paginationConfig.currentPage - 1) * paginationConfig.pageSize;
-    const endIndex = Math.min(startIndex + paginationConfig.pageSize, videoData.length);
-    
-    // 获取当前页选中的视频
-    const currentPageVideos = videoData.slice(startIndex, endIndex);
-    const selectedVideos = currentPageVideos.filter(video => video.selected);
-    
-    if (selectedVideos.length === 0) {
-        alert('请先选择要隐藏的视频');
-        return;
-    }
-    
-    // TODO: 实现批量隐藏功能
-    alert(`即将隐藏当前页选中的 ${selectedVideos.length} 个视频记录`);
-}
-
 // 初始化功能按钮
 function initFunctionBar() {
     // 全选按钮（功能栏）事件
@@ -166,10 +147,6 @@ function initFunctionBar() {
         batchMove();
     });
     
-    document.querySelector('.batch-hide-btn').addEventListener('click', function() {
-        console.log('批量隐藏');
-        batchHide();
-    });
     
     document.querySelector('.batch-remove-btn').addEventListener('click', function() {
         console.log('批量移除');

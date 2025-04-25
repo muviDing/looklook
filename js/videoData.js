@@ -618,11 +618,6 @@ function renderGridView() {
             // 不再触发打开详情的行为
         });
         
-        // 双击卡片播放视频
-        card.addEventListener('dblclick', function() {
-            playVideo(video.filePath);
-        });
-        
         grid.appendChild(card);
     });
 }

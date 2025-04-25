@@ -7,6 +7,7 @@
 import { videoData, renderTableView, renderGridView } from './videoData.js';
 // 导入多选下拉组件
 import { initMultiSelect } from './multiselect.js';
+import { syncDataFromEnum } from './multiSelectData.js';
 
 // 当前选中的视频ID
 let currentVideoId = null;
@@ -141,28 +142,8 @@ async function initDetailDrawer() {
  * 设置表格行和画廊卡片的详情查看事件
  */
 function setupDetailViewEvents() {
-    // 通用双击事件处理
-    document.addEventListener('dblclick', function(event) {
-        // 如果点击了复选框或按钮，不触发详情抽屉
-        if (event.target.closest('.checkbox-cell') || 
-            event.target.closest('input[type="checkbox"]') ||
-            event.target.closest('button')) {
-            return;
-        }
-        
-        // 表格行双击事件
-        const tableRow = event.target.closest('#video-table tbody tr');
-        if (tableRow && tableRow.dataset.videoId) {
-            openDetailDrawer(tableRow.dataset.videoId);
-        }
-        
-        // 画廊卡片双击事件
-        const videoCard = event.target.closest('.video-card');
-        if (videoCard && videoCard.dataset.videoId && 
-            !event.target.closest('.video-card-checkbox')) {
-            openDetailDrawer(videoCard.dataset.videoId);
-        }
-    });
+    // 移除双击事件监听器，双击只用于播放视频
+    // 详情查看仅通过右键菜单中的"查看详情"触发
     
     // 添加右键菜单中的"查看详情"事件 - 由其他模块调用openDetailDrawer
 }
@@ -737,6 +718,11 @@ async function saveVideoDetails() {
         
         // 更新查看视图内容
         updateViewModeContent(updatedVideo);
+        
+        // 同步枚举数据到H区域
+        console.log('保存视频详情后同步数据');
+        // 使用强制更新，确保H区域能立即获取到新值
+        await syncDataFromEnum(true);
     } catch (error) {
         console.error('保存视频详情失败:', error);
         alert('保存失败: ' + error.message);

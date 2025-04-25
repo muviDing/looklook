@@ -4,6 +4,7 @@
  */
 
 import { showCustomConfirm } from './utils.js';
+import { addCollection, addActor, syncDataFromEnum } from './multiSelectData.js';
 
 /**
  * 初始化一个多选下拉组件
@@ -251,6 +252,9 @@ async function initMultiSelect(enumType, elementId, placeholder = '', delimiter 
             
             // 更新下拉列表
             renderDropdownItems(searchInput.value);
+            
+            // 通知H区域数据更新
+            await syncDataFromEnum();
         } catch (error) {
             console.error(`删除枚举值[${item}]失败:`, error);
             alert(`删除选项"${item}"失败: ${error.message || '未知错误'}`);
@@ -288,6 +292,17 @@ async function initMultiSelect(enumType, elementId, placeholder = '', delimiter 
             // 清空搜索框并更新下拉列表
             searchInput.value = '';
             renderDropdownItems();
+            
+            // 根据枚举类型更新全局数据存储
+            if (enumType === 'collection') {
+                addCollection(value);
+            } else if (enumType === 'actors') {
+                addActor(value);
+            }
+            
+            // 主动触发同步，以便H区域立即更新
+            console.log(`添加新${enumType}值"${value}"后触发同步`);
+            await syncDataFromEnum();
         } catch (error) {
             console.error(`添加${enumType}枚举值失败:`, error);
         }
@@ -314,6 +329,16 @@ async function initMultiSelect(enumType, elementId, placeholder = '', delimiter 
                 try {
                     const updatedItems = await window.electronAPI.addEnumValue(enumType, item);
                     allItems = updatedItems;
+                    
+                    // 根据枚举类型更新全局数据存储
+                    if (enumType === 'collection') {
+                        addCollection(item);
+                    } else if (enumType === 'actors') {
+                        addActor(item);
+                    }
+                    
+                    // 触发同步
+                    await syncDataFromEnum();
                 } catch (error) {
                     console.error(`添加${enumType}枚举值失败:`, error);
                 }

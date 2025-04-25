@@ -15,6 +15,9 @@ import { initVideoList } from './areaD.js';
 import { initFooter } from './areaE.js';
 import { initDetailDrawer } from './areaF.js';
 
+// 导入多选下拉框数据模块
+import { extractDataFromVideos, syncDataFromEnum } from './multiSelectData.js';
+
 // 初始化页面
 document.addEventListener('DOMContentLoaded', async function() {
     // 初始化应用
@@ -35,6 +38,10 @@ async function initializeApp() {
             videoData.length = 0; // 清空现有数据
             videoData.push(...savedVideos);
             console.log(`成功加载 ${videoData.length} 个视频到前端`);
+            
+            // 提取筛选选项数据
+            extractDataFromVideos(videoData);
+            console.log('已从视频数据中提取筛选选项');
         } else {
             console.log('数据库中没有视频数据');
             // 确保videoData是空数组
@@ -96,6 +103,9 @@ async function initializeApp() {
         // 设置数据同步处理程序
         setupDataSyncHandlers();
         
+        // 设置数据同步任务
+        setupDataSyncTask();
+        
         console.log('应用初始化完成');
     } catch (error) {
         console.error('初始化应用失败:', error);
@@ -130,4 +140,25 @@ function setupDataSyncHandlers() {
             console.error('同步视频数据到数据库失败:', error);
         }
     });
+}
+
+// 设置数据同步任务，确保F区域和H区域数据一致
+function setupDataSyncTask() {
+    console.log('设置数据同步任务...');
+    
+    // 立即进行一次同步
+    syncDataFromEnum().then(() => {
+        console.log('初始数据同步完成');
+    }).catch(error => {
+        console.error('初始数据同步失败:', error);
+    });
+    
+    // 定期同步数据，每分钟一次
+    setInterval(() => {
+        syncDataFromEnum().then(() => {
+            console.log('定期数据同步完成');
+        }).catch(error => {
+            console.error('定期数据同步失败:', error);
+        });
+    }, 60000); // 60秒
 }

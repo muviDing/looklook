@@ -438,14 +438,19 @@ function setupVideoItemEvents() {
     // 处理表格行双击播放视频
     document.addEventListener('dblclick', function(event) {
         // 检查是否点击了表格行
-        const tableRow = event.target.closest('#video-table tr');
-        if (tableRow && tableRow.dataset.videoPath && !event.target.closest('.checkbox-cell')) {
-            playVideo(tableRow.dataset.videoPath);
+        const tableRow = event.target.closest('#video-table tbody tr');
+        if (tableRow && tableRow.dataset.videoId && !event.target.closest('.checkbox-cell')) {
+            const videoId = tableRow.dataset.videoId;
+            const video = videoData.find(v => v.id === videoId);
+            if (video) {
+                playVideo(videoId);
+            }
         }
         
-        // 保留画廊视图的缩略图双击功能
-        if (event.target.closest('.video-thumbnail')) {
-            const videoId = event.target.closest('[data-video-id]').dataset.videoId;
+        // 检查是否点击了画廊视图卡片
+        const videoCard = event.target.closest('.video-card');
+        if (videoCard && videoCard.dataset.videoId) {
+            const videoId = videoCard.dataset.videoId;
             playVideo(videoId);
         }
     });
