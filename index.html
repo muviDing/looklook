@@ -388,69 +388,32 @@
     <!-- 筛选浮窗 - H区域 -->
     <div id="filter-backdrop"></div>
     <div id="filter-popup">
-        <div class="filter-popup-header">
-            <h3>筛选条件</h3>
-            <button id="filter-close" class="filter-popup-close"><i class="fas fa-times"></i></button>
-        </div>
-        <!-- 添加已选筛选条件显示区域 -->
+        <!-- 已选筛选条件显示区域 -->
         <div id="active-filters" class="active-filters"></div>
-        <div class="filter-popup-body">
-            <form id="filter-form">
-                <div class="filter-group">
-                    <label for="filter-collection-container" class="filter-group-label">合集</label>
-                    <div id="filter-collection-container"></div>
-                </div>
-                
-                <div class="filter-group">
-                    <label for="filter-actors-container" class="filter-group-label">演员</label>
-                    <div id="filter-actors-container"></div>
-                </div>
-                
-                <div class="filter-group">
-                    <label class="filter-group-label">评分</label>
-                    <div class="filter-rating">
-                        <div id="filter-rating-stars">
-                            <i class="far fa-star" data-value="1"></i>
-                            <i class="far fa-star" data-value="2"></i>
-                            <i class="far fa-star" data-value="3"></i>
-                            <i class="far fa-star" data-value="4"></i>
-                            <i class="far fa-star" data-value="5"></i>
-                        </div>
-                        <span>当前选择: <span id="filter-rating-value">0</span> 星</span>
-                    </div>
-                </div>
-                
-                <div class="filter-group">
-                    <label for="filter-resolution" class="filter-group-label">分辨率</label>
-                    <select id="filter-resolution">
-                        <option value="">全部</option>
-                        <option value="720p">720p</option>
-                        <option value="1080p">1080p</option>
-                        <option value="2k">2K</option>
-                        <option value="4k">4K</option>
-                        <option value="8k">8K</option>
-                    </select>
-                </div>
-                
-                <div class="filter-group">
-                    <label class="filter-group-label">时长 (分钟)</label>
-                    <div class="filter-duration-range">
-                        <input type="number" id="filter-duration-min" placeholder="最短">
-                        <span>至</span>
-                        <input type="number" id="filter-duration-max" placeholder="最长">
-                    </div>
-                </div>
-                
-                <div class="filter-group">
-                    <label for="filter-path" class="filter-group-label">文件路径</label>
-                    <input type="text" id="filter-path" placeholder="输入文件路径关键词">
-                </div>
-            </form>
+        
+        <!-- 选项卡导航 -->
+        <div class="filter-tabs">
+            <button id="tab-collections" class="filter-tab active">合集</button>
+            <button id="tab-actors" class="filter-tab">演员</button>
         </div>
-        <div class="filter-popup-footer">
-            <button type="button" id="filter-reset" class="filter-btn-reset">重置</button>
-            <button type="button" id="filter-apply" class="filter-btn-apply">应用筛选</button>
-        </div>
+        
+        <form id="filter-form">
+            <!-- 合集选项卡内容 -->
+            <div id="tab-content-collections" class="filter-tab-content active">
+                <div class="filter-search-container">
+                    <input type="text" id="collection-search" class="filter-search" placeholder="搜索合集...">
+                </div>
+                <div id="filter-collection-bubble-container" class="filter-bubble-container"></div>
+            </div>
+            
+            <!-- 演员选项卡内容 -->
+            <div id="tab-content-actors" class="filter-tab-content">
+                <div class="filter-search-container">
+                    <input type="text" id="actors-search" class="filter-search" placeholder="搜索演员...">
+                </div>
+                <div id="filter-actors-bubble-container" class="filter-bubble-container"></div>
+            </div>
+        </form>
     </div>
 
     <!-- 窗口控制按钮事件通过main.js处理，使用electronAPI -->

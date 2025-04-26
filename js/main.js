@@ -106,6 +106,9 @@ async function initializeApp() {
         // 设置数据同步任务
         setupDataSyncTask();
         
+        // 初始化筛选浮窗和选项卡切换
+        initFilterPopupAndTabs();
+        
         console.log('应用初始化完成');
     } catch (error) {
         console.error('初始化应用失败:', error);
@@ -161,4 +164,98 @@ function setupDataSyncTask() {
             console.error('定期数据同步失败:', error);
         });
     }, 60000); // 60秒
+}
+
+// 初始化筛选浮窗和选项卡切换
+function initFilterPopupAndTabs() {
+    // 筛选浮窗
+    const filterButton = document.querySelector('.filter-btn');
+    const filterPopup = document.getElementById('filter-popup');
+    const closeFilterButton = document.getElementById('filter-close');
+    
+    console.log('筛选按钮:', filterButton);
+    console.log('筛选浮窗:', filterPopup);
+    console.log('关闭按钮:', closeFilterButton);
+    
+    // 显示筛选浮窗
+    filterButton.addEventListener('click', () => {
+        const backdrop = document.getElementById('filter-backdrop');
+        const filterPopup = document.getElementById('filter-popup');
+        
+        // 显示背景和浮窗
+        backdrop.style.display = 'block';
+        filterPopup.style.display = 'block';
+        
+        console.log('显示筛选浮窗');
+        
+        // 添加动画效果
+        setTimeout(() => {
+            backdrop.classList.add('active');
+            filterPopup.classList.add('active');
+            
+            console.log('激活背景和浮窗');
+        }, 10);
+    });
+    
+    // 关闭筛选浮窗
+    closeFilterButton.addEventListener('click', () => {
+        hideFilterPopup();
+    });
+    
+    // 点击外部关闭筛选浮窗
+    document.addEventListener('click', (e) => {
+        const backdrop = document.getElementById('filter-backdrop');
+        if (backdrop.style.display === 'block' && 
+            !filterPopup.contains(e.target) && 
+            e.target !== filterButton && 
+            !e.target.closest('.filter-btn')) {
+            hideFilterPopup();
+        }
+    });
+    
+    // 隐藏筛选浮窗
+    function hideFilterPopup() {
+        const backdrop = document.getElementById('filter-backdrop');
+        backdrop.classList.remove('active');
+        filterPopup.classList.remove('active');
+        
+        console.log('关闭筛选浮窗');
+        
+        // 动画结束后隐藏元素
+        setTimeout(() => {
+            backdrop.style.display = 'none';
+            filterPopup.style.display = 'none';
+            
+            console.log('隐藏背景和浮窗');
+        }, 300);
+    }
+    
+    // 选项卡切换功能
+    const tabs = document.querySelectorAll('.filter-tab');
+    const tabContents = document.querySelectorAll('.filter-tab-content');
+    
+    console.log('标签数量:', tabs.length);
+    console.log('标签内容区域数量:', tabContents.length);
+    
+    // 初始化 - 默认显示第一个选项卡
+    tabs[0].classList.add('active');
+    tabContents[0].classList.add('active');
+    
+    tabs.forEach(tab => {
+        console.log('标签ID:', tab.id);
+        tab.addEventListener('click', () => {
+            // 移除所有active类
+            tabs.forEach(t => t.classList.remove('active'));
+            tabContents.forEach(content => content.classList.remove('active'));
+            
+            // 添加active类到当前点击的选项卡
+            tab.classList.add('active');
+            
+            // 显示对应的内容区域
+            const tabId = tab.id;
+            const contentId = `tab-content-${tabId.replace('tab-', '')}`;
+            console.log('点击了标签:', tabId, '将显示内容:', contentId);
+            document.getElementById(contentId).classList.add('active');
+        });
+    });
 }

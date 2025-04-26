@@ -7,7 +7,7 @@
 import { videoData, renderTableView, renderGridView } from './videoData.js';
 // 导入多选下拉组件
 import { initMultiSelect } from './multiselect.js';
-import { syncDataFromEnum } from './multiSelectData.js';
+import { syncDataFromEnum, refreshFilterBubbles } from './multiSelectData.js';
 
 // 当前选中的视频ID
 let currentVideoId = null;
@@ -720,9 +720,9 @@ async function saveVideoDetails() {
         updateViewModeContent(updatedVideo);
         
         // 同步枚举数据到H区域
-        console.log('保存视频详情后同步数据');
-        // 使用强制更新，确保H区域能立即获取到新值
-        await syncDataFromEnum(true);
+        console.log('保存视频详情后同步数据并刷新筛选浮窗');
+        // 主动刷新筛选区域，确保H区域能立即获取到新值
+        await refreshFilterBubbles(true);
     } catch (error) {
         console.error('保存视频详情失败:', error);
         alert('保存失败: ' + error.message);

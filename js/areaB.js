@@ -16,6 +16,10 @@ import {
 let collectionMultiSelect = null;
 let actorsMultiSelect = null;
 
+// 选中的筛选值
+let selectedCollections = [];
+let selectedActors = [];
+
 // 初始化搜索和筛选功能
 function initSearchFilter() {
     // 首先从视频数据中提取数据源
@@ -49,6 +53,28 @@ function initSearchFilter() {
 
     // 初始化筛选浮窗事件
     initFilterPopup();
+    
+    // 添加筛选气泡刷新事件监听
+    document.addEventListener('filter-bubbles-refresh', handleFilterBubblesRefresh);
+}
+
+// 处理筛选气泡刷新事件
+function handleFilterBubblesRefresh() {
+    console.log('接收到筛选气泡刷新事件');
+    
+    // 获取最新的数据源
+    const collections = getCollections();
+    const actors = getActors();
+    
+    console.log('刷新筛选气泡: 合集数量=', collections.length, '演员数量=', actors.length);
+    
+    // 刷新气泡显示
+    initCollectionBubbles(collections);
+    initActorsBubbles(actors);
+    
+    // 保留当前选择的状态
+    refreshCollectionBubbles();
+    refreshActorsBubbles();
 }
 
 // 显示筛选浮窗
@@ -66,10 +92,25 @@ function showFilterPopup() {
         return;
     }
     
-    // 获取筛选按钮位置，将浮窗定位在附近
-    const btnRect = filterBtn.getBoundingClientRect();
-    popup.style.top = (btnRect.bottom + 10) + 'px'; // 在按钮下方10px
-    popup.style.right = (window.innerWidth - btnRect.right) + 'px'; // 对齐按钮右侧
+    // 初始化已选区域的显示状态
+    const activeFiltersContainer = document.getElementById('active-filters');
+    if (activeFiltersContainer) {
+        // 检查是否有活动的筛选条件
+        const hasFilters = 
+            (selectedCollections && selectedCollections.length > 0) ||
+            (selectedActors && selectedActors.length > 0);
+            
+        // 根据是否有筛选条件决定显示状态
+        if (hasFilters) {
+            activeFiltersContainer.style.display = 'flex';
+            activeFiltersContainer.style.borderBottom = '1px solid rgba(229, 231, 235, 0.5)';
+        } else {
+            activeFiltersContainer.style.display = 'none';
+            activeFiltersContainer.style.borderBottom = 'none';
+        }
+    }
+    
+    // 不使用动态定位，依赖CSS固定位置
     
     // 确保先把display设置为block
     backdrop.style.display = 'block';
@@ -116,17 +157,20 @@ function initFilterPopup() {
     
     // 先同步数据源
     syncDataFromEnum().then(() => {
-        console.log('数据源同步完成，初始化多选组件');
-        // 初始化多选下拉框组件
-        initMultiSelectComponents();
+        console.log('数据源同步完成，初始化气泡标签组件');
+        // 初始化气泡标签组件
+        initBubbleComponents();
     }).catch(error => {
         console.error('数据源同步失败:', error);
         // 失败时也尝试初始化组件
-        initMultiSelectComponents();
+        initBubbleComponents();
     });
     
-    // 关闭按钮事件
-    document.getElementById('filter-close').addEventListener('click', hideFilterPopup);
+    // 关闭按钮事件 - 如果有的话
+    const closeButton = document.getElementById('filter-close');
+    if (closeButton) {
+        closeButton.addEventListener('click', hideFilterPopup);
+    }
     
     // 点击背景关闭
     document.getElementById('filter-backdrop').addEventListener('click', hideFilterPopup);
@@ -136,83 +180,240 @@ function initFilterPopup() {
         event.stopPropagation();
     });
     
-    // 重置按钮事件
-    document.getElementById('filter-reset').addEventListener('click', function() {
-        // 重置多选组件
-        collectionMultiSelect.clear();
-        actorsMultiSelect.clear();
-        
-        // 重置评分
-        resetRatingFilter();
-        
-        // 重置其他表单元素
-        document.getElementById('filter-resolution').value = '';
-        document.getElementById('filter-duration-min').value = '';
-        document.getElementById('filter-duration-max').value = '';
-        document.getElementById('filter-path').value = '';
-        
-        // 清除已选筛选条件显示
-        clearActiveFilters();
-    });
-    
-    // 应用筛选按钮事件
-    document.getElementById('filter-apply').addEventListener('click', function() {
-        applyAdvancedFilter();
-        hideFilterPopup();
-    });
-    
-    // 初始化星级评分点击事件
-    initRatingFilter();
-    
-    // 移除筛选条件点击事件
-    document.addEventListener('click', function(e) {
-        if (e.target.classList.contains('remove-filter')) {
-            removeFilter(e.target.getAttribute('data-type'));
-        }
+    // 选项卡切换功能
+    const tabs = document.querySelectorAll('.filter-tab');
+    tabs.forEach(tab => {
+        tab.addEventListener('click', function() {
+            // 移除所有active类
+            tabs.forEach(t => t.classList.remove('active'));
+            
+            // 添加active类到当前点击的选项卡
+            this.classList.add('active');
+            
+            // 显示对应的内容区域
+            const tabId = this.id;
+            const contentId = `tab-content-${tabId.replace('tab-', '')}`;
+            
+            document.querySelectorAll('.filter-tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            document.getElementById(contentId).classList.add('active');
+        });
     });
     
     // 从URL参数加载筛选条件（如果有）
     loadFiltersFromUrl();
 }
 
-// 初始化多选下拉框组件
-function initMultiSelectComponents() {
-    console.log('初始化筛选器多选下拉框组件');
+// 初始化气泡标签组件
+function initBubbleComponents() {
+    console.log('初始化气泡标签组件');
     
     // 获取数据源
     const collections = getCollections();
     const actors = getActors();
     
-    console.log('合集数据源:', collections);
-    console.log('演员数据源:', actors);
+    console.log('合集数据源:', collections.length, '项');
+    console.log('演员数据源:', actors.length, '项');
     
-    // 合集多选组件
-    const collectionContainer = document.getElementById('filter-collection-container');
-    if (collectionContainer) {
-        collectionMultiSelect = createFilterMultiSelect({
-            containerElement: collectionContainer,
-            placeholder: '选择合集',
-            dataSource: collections,
-            dataType: 'collections'
-        });
-        console.log('合集多选组件已初始化');
-    } else {
-        console.error('找不到合集容器元素');
+    // 初始化合集气泡
+    initCollectionBubbles(collections);
+    
+    // 初始化演员气泡
+    initActorsBubbles(actors);
+    
+    // 初始化搜索功能
+    initBubbleSearch();
+}
+
+// 初始化合集气泡
+function initCollectionBubbles(collections) {
+    const container = document.getElementById('filter-collection-bubble-container');
+    if (!container) {
+        console.error('找不到合集气泡容器');
+        return;
     }
     
-    // 演员多选组件
-    const actorsContainer = document.getElementById('filter-actors-container');
-    if (actorsContainer) {
-        actorsMultiSelect = createFilterMultiSelect({
-            containerElement: actorsContainer,
-            placeholder: '选择演员',
-            dataSource: actors,
-            dataType: 'actors'
-        });
-        console.log('演员多选组件已初始化');
-    } else {
-        console.error('找不到演员容器元素');
+    container.innerHTML = '';
+    
+    if (collections.length === 0) {
+        container.innerHTML = '<div class="filter-no-results">暂无合集数据</div>';
+        return;
     }
+    
+    collections.forEach(collection => {
+        const bubble = document.createElement('div');
+        bubble.className = `filter-bubble ${selectedCollections.includes(collection) ? 'selected' : ''}`;
+        bubble.textContent = collection;
+        bubble.dataset.value = collection;
+        
+        bubble.addEventListener('click', () => {
+            toggleCollectionSelection(collection, bubble);
+        });
+        
+        container.appendChild(bubble);
+    });
+}
+
+// 初始化演员气泡
+function initActorsBubbles(actors) {
+    const container = document.getElementById('filter-actors-bubble-container');
+    if (!container) {
+        console.error('找不到演员气泡容器');
+        return;
+    }
+    
+    container.innerHTML = '';
+    
+    if (actors.length === 0) {
+        container.innerHTML = '<div class="filter-no-results">暂无演员数据</div>';
+        return;
+    }
+    
+    actors.forEach(actor => {
+        const bubble = document.createElement('div');
+        bubble.className = `filter-bubble ${selectedActors.includes(actor) ? 'selected' : ''}`;
+        bubble.textContent = actor;
+        bubble.dataset.value = actor;
+        
+        bubble.addEventListener('click', () => {
+            toggleActorSelection(actor, bubble);
+        });
+        
+        container.appendChild(bubble);
+    });
+}
+
+// 切换合集选择状态
+function toggleCollectionSelection(collection, bubbleElement) {
+    const index = selectedCollections.indexOf(collection);
+    
+    if (index === -1) {
+        // 添加选择
+        selectedCollections.push(collection);
+        bubbleElement.classList.add('selected');
+    } else {
+        // 移除选择
+        selectedCollections.splice(index, 1);
+        bubbleElement.classList.remove('selected');
+    }
+    
+    // 自动应用筛选，不等待用户点击应用按钮
+    applyAdvancedFilter();
+}
+
+// 切换演员选择状态
+function toggleActorSelection(actor, bubbleElement) {
+    const index = selectedActors.indexOf(actor);
+    
+    if (index === -1) {
+        // 添加选择
+        selectedActors.push(actor);
+        bubbleElement.classList.add('selected');
+    } else {
+        // 移除选择
+        selectedActors.splice(index, 1);
+        bubbleElement.classList.remove('selected');
+    }
+    
+    // 自动应用筛选，不等待用户点击应用按钮
+    applyAdvancedFilter();
+}
+
+// 重置合集选择
+function resetCollectionBubbles() {
+    selectedCollections = [];
+    const bubbles = document.querySelectorAll('#filter-collection-bubble-container .filter-bubble');
+    bubbles.forEach(bubble => {
+        bubble.classList.remove('selected');
+    });
+}
+
+// 重置演员选择
+function resetActorsBubbles() {
+    selectedActors = [];
+    const bubbles = document.querySelectorAll('#filter-actors-bubble-container .filter-bubble');
+    bubbles.forEach(bubble => {
+        bubble.classList.remove('selected');
+    });
+}
+
+// 初始化搜索功能
+function initBubbleSearch() {
+    // 合集搜索
+    const collectionSearch = document.getElementById('collection-search');
+    collectionSearch.addEventListener('input', (e) => {
+        const searchTerm = e.target.value.toLowerCase();
+        filterCollectionBubbles(searchTerm);
+    });
+    
+    // 演员搜索
+    const actorsSearch = document.getElementById('actors-search');
+    actorsSearch.addEventListener('input', (e) => {
+        const searchTerm = e.target.value.toLowerCase();
+        filterActorsBubbles(searchTerm);
+    });
+}
+
+// 筛选合集气泡
+function filterCollectionBubbles(searchTerm) {
+    const collections = getCollections();
+    const filteredCollections = searchTerm 
+        ? collections.filter(c => c.toLowerCase().includes(searchTerm))
+        : collections;
+    
+    const container = document.getElementById('filter-collection-bubble-container');
+    
+    container.innerHTML = '';
+    
+    if (filteredCollections.length === 0) {
+        container.innerHTML = '<div class="filter-no-results">没有匹配的合集</div>';
+        return;
+    }
+    
+    filteredCollections.forEach(collection => {
+        const bubble = document.createElement('div');
+        bubble.className = `filter-bubble ${selectedCollections.includes(collection) ? 'selected' : ''}`;
+        bubble.textContent = collection;
+        bubble.dataset.value = collection;
+        
+        bubble.addEventListener('click', () => {
+            toggleCollectionSelection(collection, bubble);
+        });
+        
+        container.appendChild(bubble);
+    });
+}
+
+// 筛选演员气泡
+function filterActorsBubbles(searchTerm) {
+    const actors = getActors();
+    const filteredActors = searchTerm 
+        ? actors.filter(a => a.toLowerCase().includes(searchTerm))
+        : actors;
+    
+    const container = document.getElementById('filter-actors-bubble-container');
+    
+    container.innerHTML = '';
+    
+    if (filteredActors.length === 0) {
+        container.innerHTML = '<div class="filter-no-results">没有匹配的演员</div>';
+        return;
+    }
+    
+    filteredActors.forEach(actor => {
+        const bubble = document.createElement('div');
+        bubble.className = `filter-bubble ${selectedActors.includes(actor) ? 'selected' : ''}`;
+        bubble.textContent = actor;
+        bubble.dataset.value = actor;
+        
+        bubble.addEventListener('click', () => {
+            toggleActorSelection(actor, bubble);
+        });
+        
+        container.appendChild(bubble);
+    });
 }
 
 // 从URL参数加载筛选条件
@@ -224,37 +425,15 @@ function loadFiltersFromUrl() {
         try {
             const filterParams = JSON.parse(decodeURIComponent(urlParams.get('filter')));
             
-            // 设置多选框的值
+            // 设置气泡选择器的值
             if (filterParams.collections && Array.isArray(filterParams.collections)) {
-                collectionMultiSelect.setValues(filterParams.collections);
+                selectedCollections = [...filterParams.collections];
+                refreshCollectionBubbles();
             }
             
             if (filterParams.actors && Array.isArray(filterParams.actors)) {
-                actorsMultiSelect.setValues(filterParams.actors);
-            }
-            
-            // 设置其他筛选项
-            if (filterParams.rating) {
-                const ratingValue = document.getElementById('filter-rating-value');
-                ratingValue.textContent = filterParams.rating;
-                updateStarRating(filterParams.rating);
-            }
-            
-            if (filterParams.resolution) {
-                document.getElementById('filter-resolution').value = filterParams.resolution;
-            }
-            
-            if (filterParams.duration) {
-                if (filterParams.duration.min) {
-                    document.getElementById('filter-duration-min').value = filterParams.duration.min;
-                }
-                if (filterParams.duration.max) {
-                    document.getElementById('filter-duration-max').value = filterParams.duration.max;
-                }
-            }
-            
-            if (filterParams.path) {
-                document.getElementById('filter-path').value = filterParams.path;
+                selectedActors = [...filterParams.actors];
+                refreshActorsBubbles();
             }
             
             // 应用筛选
@@ -263,6 +442,32 @@ function loadFiltersFromUrl() {
             console.error('解析URL筛选参数错误:', error);
         }
     }
+}
+
+// 刷新合集气泡选中状态
+function refreshCollectionBubbles() {
+    const bubbles = document.querySelectorAll('#filter-collection-bubble-container .filter-bubble');
+    bubbles.forEach(bubble => {
+        const value = bubble.dataset.value;
+        if (selectedCollections.includes(value)) {
+            bubble.classList.add('selected');
+        } else {
+            bubble.classList.remove('selected');
+        }
+    });
+}
+
+// 刷新演员气泡选中状态
+function refreshActorsBubbles() {
+    const bubbles = document.querySelectorAll('#filter-actors-bubble-container .filter-bubble');
+    bubbles.forEach(bubble => {
+        const value = bubble.dataset.value;
+        if (selectedActors.includes(value)) {
+            bubble.classList.add('selected');
+        } else {
+            bubble.classList.remove('selected');
+        }
+    });
 }
 
 // 更新URL参数
@@ -275,11 +480,7 @@ function updateUrlWithFilters(filterData) {
     // 如果有活跃筛选条件，添加到URL
     if (
         (filterData.collections && filterData.collections.length > 0) ||
-        (filterData.actors && filterData.actors.length > 0) ||
-        filterData.rating > 0 ||
-        filterData.resolution ||
-        (filterData.duration && (filterData.duration.min || filterData.duration.max)) ||
-        filterData.path
+        (filterData.actors && filterData.actors.length > 0)
     ) {
         url.searchParams.set('filter', encodeURIComponent(JSON.stringify(filterData)));
     }
@@ -288,238 +489,177 @@ function updateUrlWithFilters(filterData) {
     window.history.replaceState({}, '', url);
 }
 
-// 更新星星评分显示
-function updateStarRating(rating) {
-    const stars = document.querySelectorAll('#filter-rating-stars i');
-    stars.forEach((star, index) => {
-        if (index < rating) {
-            star.classList.remove('far');
-            star.classList.add('fas');
-        } else {
-            star.classList.remove('fas');
-            star.classList.add('far');
-        }
-    });
-}
-
-// 移除单个筛选条件
+// 移除筛选条件
 function removeFilter(type) {
-    switch (type) {
-        case 'collections':
-            collectionMultiSelect.clear();
-            break;
-        case 'actors':
-            actorsMultiSelect.clear();
-            break;
-        case 'rating':
-            document.getElementById('filter-rating-value').textContent = '0';
-            updateStarRating(0);
-            break;
-        case 'resolution':
-            document.getElementById('filter-resolution').value = '';
-            break;
-        case 'duration':
-            document.getElementById('filter-duration-min').value = '';
-            document.getElementById('filter-duration-max').value = '';
-            break;
-        case 'path':
-            document.getElementById('filter-path').value = '';
-            break;
+    console.log('移除筛选条件:', type);
+    if (type === 'collections') {
+        selectedCollections = [];
+        refreshCollectionBubbles();
+    } else if (type === 'actors') {
+        selectedActors = [];
+        refreshActorsBubbles();
     }
     
     // 重新应用筛选
     applyAdvancedFilter();
 }
 
-// 清除所有活跃筛选条件显示
+// 清除已选筛选条件显示
 function clearActiveFilters() {
-    document.getElementById('active-filters').innerHTML = '';
-    document.getElementById('filter-count').style.display = 'none';
-}
-
-// 更新活跃筛选条件显示
-function updateActiveFilters(filterData) {
     const activeFiltersContainer = document.getElementById('active-filters');
-    const filterCountBadge = document.getElementById('filter-count');
-    
-    // 清空现有显示
-    activeFiltersContainer.innerHTML = '';
-    
-    // 计算活跃筛选条件数量
-    let activeCount = 0;
-    
-    // 合集筛选
-    if (filterData.collections && filterData.collections.length > 0) {
-        activeCount++;
-        const tag = createFilterTag('合集: ' + filterData.collections.join(', '), 'collections');
-        activeFiltersContainer.appendChild(tag);
-    }
-    
-    // 演员筛选
-    if (filterData.actors && filterData.actors.length > 0) {
-        activeCount++;
-        const tag = createFilterTag('演员: ' + filterData.actors.join(', '), 'actors');
-        activeFiltersContainer.appendChild(tag);
-    }
-    
-    // 评分筛选
-    if (filterData.rating > 0) {
-        activeCount++;
-        const tag = createFilterTag('评分: ≥ ' + filterData.rating + '星', 'rating');
-        activeFiltersContainer.appendChild(tag);
-    }
-    
-    // 分辨率筛选
-    if (filterData.resolution) {
-        activeCount++;
-        const tag = createFilterTag('分辨率: ' + filterData.resolution, 'resolution');
-        activeFiltersContainer.appendChild(tag);
-    }
-    
-    // 时长筛选
-    if (filterData.duration && (filterData.duration.min || filterData.duration.max)) {
-        activeCount++;
-        let durationText = '时长: ';
-        if (filterData.duration.min) durationText += '≥ ' + filterData.duration.min + '分钟';
-        if (filterData.duration.min && filterData.duration.max) durationText += ' 且 ';
-        if (filterData.duration.max) durationText += '≤ ' + filterData.duration.max + '分钟';
-        
-        const tag = createFilterTag(durationText, 'duration');
-        activeFiltersContainer.appendChild(tag);
-    }
-    
-    // 文件路径筛选
-    if (filterData.path) {
-        activeCount++;
-        const tag = createFilterTag('路径: ' + filterData.path, 'path');
-        activeFiltersContainer.appendChild(tag);
-    }
-    
-    // 更新筛选条件计数
-    if (activeCount > 0) {
-        filterCountBadge.textContent = activeCount;
-        filterCountBadge.style.display = 'flex';
-    } else {
-        filterCountBadge.style.display = 'none';
+    if (activeFiltersContainer) {
+        activeFiltersContainer.innerHTML = '';
+        // 确保在清空内容后完全隐藏
+        activeFiltersContainer.style.display = 'none';
+        activeFiltersContainer.style.borderBottom = 'none';
     }
 }
 
-// 创建筛选标签元素
+// 更新已选筛选条件显示
+function updateActiveFilters(filterData) {
+    clearActiveFilters();
+    
+    const activeFiltersContainer = document.getElementById('active-filters');
+    if (!activeFiltersContainer) return;
+    
+    // 检查是否有任何筛选条件
+    const hasCollections = filterData.collections && filterData.collections.length > 0;
+    const hasActors = filterData.actors && filterData.actors.length > 0;
+    const hasActiveFilters = hasCollections || hasActors;
+    
+    // 如果没有筛选条件，确保容器隐藏并提前返回
+    if (!hasActiveFilters) {
+        activeFiltersContainer.style.display = 'none';
+        activeFiltersContainer.style.borderBottom = 'none';
+        
+        // 清除筛选按钮上的计数
+        const filterCountElement = document.getElementById('filter-count');
+        if (filterCountElement) {
+            filterCountElement.style.display = 'none';
+        }
+        return;
+    }
+    
+    // 有筛选条件时显示容器
+    activeFiltersContainer.style.display = 'flex';
+    activeFiltersContainer.style.borderBottom = '1px solid rgba(229, 231, 235, 0.5)';
+    
+    // 添加"已选："标签
+    const label = document.createElement('span');
+    label.className = 'active-filters-label';
+    label.textContent = '已选：';
+    activeFiltersContainer.appendChild(label);
+    
+    // 添加合集筛选条件
+    if (hasCollections) {
+        const text = `合集: ${filterData.collections.join(', ')}`;
+        activeFiltersContainer.appendChild(createFilterTag(text, 'collections'));
+    }
+    
+    // 添加演员筛选条件
+    if (hasActors) {
+        const text = `演员: ${filterData.actors.join(', ')}`;
+        activeFiltersContainer.appendChild(createFilterTag(text, 'actors'));
+    }
+    
+    // 添加重置按钮
+    const resetBtn = document.createElement('button');
+    resetBtn.type = 'button';
+    resetBtn.className = 'filter-btn-reset';
+    resetBtn.innerHTML = '<i class="fas fa-times"></i> 重置';
+    resetBtn.addEventListener('click', function() {
+        resetCollectionBubbles();
+        resetActorsBubbles();
+        clearActiveFilters();
+        applyAdvancedFilter();
+    });
+    activeFiltersContainer.appendChild(resetBtn);
+    
+    // 更新筛选按钮上的计数
+    const filterCountElement = document.getElementById('filter-count');
+    if (filterCountElement) {
+        const count = (hasCollections ? 1 : 0) + (hasActors ? 1 : 0);
+        filterCountElement.textContent = count;
+        filterCountElement.style.display = 'flex';
+    }
+}
+
+// 创建筛选标签
 function createFilterTag(text, type) {
     const tag = document.createElement('div');
     tag.className = 'filter-tag';
-    tag.innerHTML = `
-        ${text}
-        <span class="remove-filter" data-type="${type}">
-            <i class="fas fa-times"></i>
-        </span>
-    `;
+    
+    const content = document.createElement('span');
+    content.textContent = text;
+    
+    const removeBtn = document.createElement('span');
+    removeBtn.className = 'remove-filter';
+    removeBtn.textContent = '×';
+    removeBtn.dataset.type = type;
+    
+    // 直接添加点击事件，确保事件冒泡
+    removeBtn.addEventListener('click', function(e) {
+        e.stopPropagation(); // 防止事件冒泡到父元素
+        removeFilter(type);
+    });
+    
+    tag.appendChild(content);
+    tag.appendChild(removeBtn);
     return tag;
-}
-
-// 初始化星级评分筛选
-function initRatingFilter() {
-    const stars = document.querySelectorAll('#filter-rating-stars i');
-    const ratingValue = document.getElementById('filter-rating-value');
-    
-    stars.forEach(star => {
-        star.addEventListener('click', function() {
-            const value = parseInt(this.getAttribute('data-value'));
-            ratingValue.textContent = value;
-            
-            // 更新星星显示
-            updateStarRating(value);
-        });
-    });
-}
-
-// 重置星级评分
-function resetRatingFilter() {
-    const stars = document.querySelectorAll('#filter-rating-stars i');
-    const ratingValue = document.getElementById('filter-rating-value');
-    
-    ratingValue.textContent = '0';
-    stars.forEach(star => {
-        star.classList.remove('fas');
-        star.classList.add('far');
-    });
 }
 
 // 应用高级筛选
 function applyAdvancedFilter() {
-    // 获取所有筛选条件
-    const collections = collectionMultiSelect ? collectionMultiSelect.getValues() : [];
-    const actors = actorsMultiSelect ? actorsMultiSelect.getValues() : [];
-    const rating = parseInt(document.getElementById('filter-rating-value').textContent);
-    const resolution = document.getElementById('filter-resolution').value;
-    const minDuration = document.getElementById('filter-duration-min').value;
-    const maxDuration = document.getElementById('filter-duration-max').value;
-    const filePath = document.getElementById('filter-path').value.toLowerCase();
-    
-    // 整合筛选数据对象
+    // 构建筛选数据对象
     const filterData = {
-        collections,
-        actors,
-        rating,
-        resolution,
-        duration: {
-            min: minDuration,
-            max: maxDuration
-        },
-        path: filePath
+        collections: selectedCollections,
+        actors: selectedActors
     };
     
-    // 更新活跃筛选条件显示
-    updateActiveFilters(filterData);
-    
-    // 更新URL
+    // 更新URL参数
     updateUrlWithFilters(filterData);
     
-    // 过滤视频数据
-    const filteredVideos = videoData.filter(video => {
-        // 合集筛选（多选）
-        if (collections.length > 0 && (!video.series || !collections.includes(video.series))) {
-            return false;
-        }
-        
-        // 演员筛选（多选）
-        if (actors.length > 0) {
-            // 如果视频没有演员信息或者为空，直接排除
-            if (!video.actors || video.actors.trim() === '') {
-                return false;
-            }
-            
-            // 将视频的演员信息拆分为数组
-            const videoActors = video.actors.split(/[,，、]/).map(a => a.trim());
-            
-            // 检查是否包含任意一个选中的演员
-            if (!actors.some(actor => videoActors.includes(actor))) {
+    // 更新筛选条件显示
+    updateActiveFilters(filterData);
+    
+    // 执行筛选
+    applyFiltersToVideoList(filterData);
+}
+
+// 将筛选应用到视频列表
+function applyFiltersToVideoList(filterData) {
+    const videos = window.videoData.getVideos();
+    
+    // 根据筛选条件过滤视频
+    const filteredVideos = videos.filter(video => {
+        // 检查合集筛选
+        if (filterData.collections && filterData.collections.length > 0) {
+            if (!video.collection || !filterData.collections.includes(video.collection)) {
                 return false;
             }
         }
         
-        // 评分筛选
-        if (rating > 0 && (!video.rating || video.rating < rating)) return false;
-        
-        // 分辨率筛选
-        if (resolution && video.resolution !== resolution) return false;
-        
-        // 时长筛选
-        if (minDuration && (!video.duration || video.duration < parseInt(minDuration))) return false;
-        if (maxDuration && (!video.duration || video.duration > parseInt(maxDuration))) return false;
-        
-        // 文件路径筛选
-        if (filePath && !(video.path && video.path.toLowerCase().includes(filePath))) return false;
+        // 检查演员筛选
+        if (filterData.actors && filterData.actors.length > 0) {
+            if (!video.actors || !video.actors.length) {
+                return false;
+            }
+            
+            // 检查是否至少有一个演员匹配
+            const hasMatchingActor = filterData.actors.some(actor => 
+                video.actors.includes(actor)
+            );
+            
+            if (!hasMatchingActor) {
+                return false;
+            }
+        }
         
         return true;
     });
     
-    // 使用过滤后的数据重新渲染视图
-    renderTableView(filteredVideos);
-    renderGridView(filteredVideos);
-    
-    // 更新显示的视频数量
-    document.getElementById('total-count').textContent = filteredVideos.length;
+    // 更新视频列表显示
+    window.videoData.setFilteredVideos(filteredVideos);
 }
 
 // 根据搜索词过滤视频
@@ -552,4 +692,9 @@ function filterVideos(searchTerm) {
 }
 
 // 导出函数供主模块使用
-export { initSearchFilter, filterVideos };
+export { 
+    initSearchFilter, 
+    filterVideos,
+    // 导出刷新函数，允许外部模块调用刷新
+    handleFilterBubblesRefresh
+};
