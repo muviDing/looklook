@@ -82,30 +82,6 @@
                 </button>
             </div>
             
-            <div class="batch-actions" id="batch-actions">
-                <div class="selection-controls mr-4">
-                    <button class="select-all-btn px-2 py-1 text-sm text-gray-600 hover:text-gray-800">
-                        全选
-                    </button>
-                    <button class="invert-selection-btn px-2 py-1 text-sm text-gray-600 hover:text-gray-800">
-                        反选
-                    </button>
-                    <span class="selected-count ml-2 text-sm text-gray-500">
-                        已选择 <span id="selected-count">0</span> 项
-                    </span>
-                </div>
-                <div class="batch-buttons">
-                    <button class="batch-move-btn px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded-md mr-2">
-                        <i class="fas fa-folder-open mr-1"></i>
-                        移动到
-                    </button>
-                    <button class="batch-remove-btn px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded-md">
-                        <i class="fas fa-trash-alt mr-1"></i>
-                        移除
-                    </button>
-                </div>
-            </div>
-            
             <div class="view-toggle">
                 <!-- 视图切换按钮将由JavaScript动态生成 -->
             </div>
@@ -146,6 +122,33 @@
             <!-- 画廊视图 (默认隐藏) -->
             <div class="video-grid hidden" id="video-grid">
                 <!-- 视频数据将通过JavaScript动态填充 -->
+            </div>
+            
+            <!-- 区域I: 批量操作浮窗 -->
+            <div class="batch-operations-float" id="batch-operations-float">
+                <div class="batch-float-content">
+                    <div class="selection-controls mr-4">
+                        <button class="select-all-btn px-2 py-1 text-sm text-gray-600 hover:text-gray-800">
+                            全选
+                        </button>
+                        <button class="invert-selection-btn px-2 py-1 text-sm text-gray-600 hover:text-gray-800">
+                            反选
+                        </button>
+                        <span class="selected-count ml-2 text-sm text-gray-500">
+                            已选择 <span id="selected-count">0</span> 项
+                        </span>
+                    </div>
+                    <div class="batch-buttons">
+                        <button class="batch-move-btn px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded-md mr-2">
+                            <i class="fas fa-folder-open mr-1"></i>
+                            移动到
+                        </button>
+                        <button class="batch-remove-btn px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded-md">
+                            <i class="fas fa-trash-alt mr-1"></i>
+                            移除
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -414,6 +417,105 @@
                 <div id="filter-actors-bubble-container" class="filter-bubble-container"></div>
             </div>
         </form>
+    </div>
+
+    <!-- 区域J: 表头设置浮窗 -->
+    <div class="header-settings-float" id="header-settings-float">
+        <div class="column-list">
+            <!-- 表头列表将通过JavaScript动态填充 -->
+            <div class="column-item">
+                <input type="checkbox" id="col-filename" checked>
+                <label for="col-filename">文件名</label>
+            </div>
+            <div class="column-item">
+                <input type="checkbox" id="col-code" checked>
+                <label for="col-code">标题</label>
+            </div>
+            <div class="column-item">
+                <input type="checkbox" id="col-collection" checked>
+                <label for="col-collection">合集</label>
+            </div>
+            <div class="column-item">
+                <input type="checkbox" id="col-actors" checked>
+                <label for="col-actors">演员</label>
+            </div>
+            <div class="column-item">
+                <input type="checkbox" id="col-resolution" checked>
+                <label for="col-resolution">分辨率</label>
+            </div>
+            <div class="column-item">
+                <input type="checkbox" id="col-rating" checked>
+                <label for="col-rating">评分</label>
+            </div>
+            <div class="column-item">
+                <input type="checkbox" id="col-viewcount" checked>
+                <label for="col-viewcount">观看次数</label>
+            </div>
+            <div class="column-item">
+                <input type="checkbox" id="col-lastview" checked>
+                <label for="col-lastview">最后观看时间</label>
+            </div>
+            <div class="column-item">
+                <input type="checkbox" id="col-notes" checked>
+                <label for="col-notes">备注</label>
+            </div>
+            <div class="column-item">
+                <input type="checkbox" id="col-filepath" checked>
+                <label for="col-filepath">文件路径</label>
+            </div>
+            <div class="column-item">
+                <input type="checkbox" id="col-filesize" checked>
+                <label for="col-filesize">文件大小</label>
+            </div>
+            <div class="column-item">
+                <input type="checkbox" id="col-createdate" checked>
+                <label for="col-createdate">文件创建时间</label>
+            </div>
+            <div class="column-item">
+                <input type="checkbox" id="col-importdate" checked>
+                <label for="col-importdate">导入时间</label>
+            </div>
+            <div class="column-item">
+                <input type="checkbox" id="col-releasedate" checked>
+                <label for="col-releasedate">上映时间</label>
+            </div>
+        </div>
+    </div>
+
+    <!-- 区域K: 排序设置浮窗 -->
+    <div class="sort-settings-float" id="sort-settings-float">
+        <div class="sort-field-section">
+            <label for="sort-field">排序字段</label>
+            <select id="sort-field" class="sort-field-select">
+                <option value="fileName">文件名</option>
+                <option value="code">标题</option>
+                <option value="collection">合集</option>
+                <option value="actors">演员</option>
+                <option value="resolution">分辨率</option>
+                <option value="rating">评分</option>
+                <option value="viewCount">观看次数</option>
+                <option value="lastViewDate">最后观看时间</option>
+                <option value="notes">备注</option>
+                <option value="filePath">文件路径</option>
+                <option value="fileSize">文件大小</option>
+                <option value="createdAt">文件创建时间</option>
+                <option value="importDate">导入时间</option>
+                <option value="releaseDate">上映时间</option>
+            </select>
+        </div>
+        <div class="sort-direction-section">
+            <label>排序方向</label>
+            <div class="sort-direction-options">
+                <div class="sort-direction-option">
+                    <input type="radio" id="sort-asc" name="sort-direction" value="asc" checked>
+                    <label for="sort-asc">升序 <i class="fas fa-sort-up"></i></label>
+                </div>
+                <div class="sort-direction-option">
+                    <input type="radio" id="sort-desc" name="sort-direction" value="desc">
+                    <label for="sort-desc">降序 <i class="fas fa-sort-down"></i></label>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- 窗口控制按钮事件通过main.js处理，使用electronAPI -->

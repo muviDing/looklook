@@ -105,11 +105,7 @@ body {
 }
 
 .batch-actions {
-    display: none; /* 默认隐藏批量操作按钮 */
-}
-
-.batch-actions.visible {
-    display: flex;
+    display: none !important; /* 确保完全隐藏 */
 }
 
 .view-toggle {
@@ -893,4 +889,185 @@ body {
 .video-card.selected {
     border-color: #1890ff;
     box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.2);
+}
+
+/* 区域I: 批量操作浮窗 */
+.batch-operations-float {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    z-index: 100;
+    background-color: rgba(255, 255, 255, 0.95);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    transition: transform 0.3s ease, opacity 0.3s ease;
+    opacity: 0;
+    pointer-events: none;
+    max-width: 90%;
+}
+
+.batch-operations-float.visible {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.batch-float-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+}
+
+/* 区域J: 表头设置浮窗 */
+.header-settings-float {
+    position: absolute;
+    z-index: 200;
+    background-color: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    width: 300px;
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid rgba(229, 231, 235, 0.5);
+    transform-origin: top right;
+    transform: scale(0.95);
+    opacity: 0;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+    padding: 16px;
+}
+
+.header-settings-float.visible {
+    display: flex;
+    transform: scale(1);
+    opacity: 1;
+}
+
+.column-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.column-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.column-item input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+}
+
+.column-item label {
+    font-size: 14px;
+    color: #374151;
+    user-select: none;
+}
+
+/* 区域K: 排序设置浮窗 */
+.sort-settings-float {
+    position: absolute;
+    z-index: 200;
+    background-color: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    width: 300px;
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid rgba(229, 231, 235, 0.5);
+    transform-origin: top right;
+    transform: scale(0.95);
+    opacity: 0;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+    padding: 16px;
+}
+
+.sort-settings-float.visible {
+    display: flex;
+    transform: scale(1);
+    opacity: 1;
+}
+
+.sort-field-section,
+.sort-direction-section {
+    margin-bottom: 16px;
+}
+
+.sort-field-section label,
+.sort-direction-section label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #374151;
+}
+
+.sort-field-select {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    background-color: white;
+    font-size: 14px;
+    color: #1f2937;
+}
+
+.sort-direction-options {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.sort-direction-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.sort-direction-option input[type="radio"] {
+    width: 16px;
+    height: 16px;
+}
+
+.sort-direction-option label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    color: #374151;
+    margin-bottom: 0;
+    font-weight: normal;
+}
+
+/* 添加浮窗遮罩层，用于捕捉点击外部区域的事件 */
+.float-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.3);
+    z-index: 190;
+    display: none;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.float-backdrop.visible {
+    display: block;
+    opacity: 1;
 }

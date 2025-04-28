@@ -5,7 +5,7 @@
  */
 
 // 导入视频数据模块
-import { videoData, updatePagination, paginationConfig } from './videoData.js';
+import { videoData, updatePagination, paginationConfig, sortVideos, currentSortSettings } from './videoData.js';
 
 // 导入各个区域模块
 import { initTitleBar } from './areaA.js';
@@ -71,6 +71,27 @@ async function initializeApp() {
         await import('./videoData.js').then(async module => {
             if (typeof module.loadVideoData === 'function') {
                 await module.loadVideoData();
+            }
+            
+            // 应用排序
+            if (typeof module.sortVideos === 'function') {
+                // 从localStorage加载排序设置
+                try {
+                    const savedSortSettings = localStorage.getItem('sortSettings');
+                    if (savedSortSettings) {
+                        const settings = JSON.parse(savedSortSettings);
+                        module.sortVideos(settings.field, settings.direction);
+                        console.log(`应用已保存的排序设置: ${settings.field}, ${settings.direction}`);
+                    } else {
+                        // 使用默认排序
+                        module.sortVideos('fileName', 'asc');
+                        console.log('应用默认排序设置: fileName, asc');
+                    }
+                } catch (e) {
+                    console.error('解析保存的排序设置失败:', e);
+                    // 使用默认排序
+                    module.sortVideos('fileName', 'asc');
+                }
             }
         });
         
@@ -182,19 +203,24 @@ function initFilterPopupAndTabs() {
         const backdrop = document.getElementById('filter-backdrop');
         const filterPopup = document.getElementById('filter-popup');
         
+        // 设置浮窗位置，使其贴近筛选按钮
+        const btnRect = filterButton.getBoundingClientRect();
+        filterPopup.style.position = 'absolute';
+        filterPopup.style.top = (btnRect.bottom + 5) + 'px';
+        filterPopup.style.right = (window.innerWidth - btnRect.right) + 'px';
+        
         // 显示背景和浮窗
         backdrop.style.display = 'block';
         filterPopup.style.display = 'block';
         
         console.log('显示筛选浮窗');
         
-        // 添加动画效果
-        setTimeout(() => {
-            backdrop.classList.add('active');
-            filterPopup.classList.add('active');
-            
-            console.log('激活背景和浮窗');
-        }, 10);
+        // 强制浏览器重绘
+        filterPopup.offsetHeight;
+        
+        // 直接添加active类触发动画效果
+        backdrop.classList.add('active');
+        filterPopup.classList.add('active');
     });
     
     // 关闭筛选浮窗
@@ -216,18 +242,25 @@ function initFilterPopupAndTabs() {
     // 隐藏筛选浮窗
     function hideFilterPopup() {
         const backdrop = document.getElementById('filter-backdrop');
+        const filterPopup = document.getElementById('filter-popup');
+        
         backdrop.classList.remove('active');
         filterPopup.classList.remove('active');
         
         console.log('关闭筛选浮窗');
         
-        // 动画结束后隐藏元素
+        // 重置浮窗位置和样式，移除行内样式
         setTimeout(() => {
             backdrop.style.display = 'none';
             filterPopup.style.display = 'none';
             
+            // 移除行内定位样式，确保不影响下次显示
+            filterPopup.style.position = '';
+            filterPopup.style.top = '';
+            filterPopup.style.right = '';
+            
             console.log('隐藏背景和浮窗');
-        }, 300);
+        }, 200);
     }
     
     // 选项卡切换功能

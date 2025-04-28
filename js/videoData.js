@@ -16,6 +16,15 @@ let textFilteredData = null;
 // 条件筛选结果
 let conditionFilteredData = null;
 
+// 排序后的数据
+let sortedData = null;
+
+// 当前排序设置
+let currentSortSettings = {
+    field: 'fileName',
+    direction: 'asc'
+};
+
 // 分页配置
 let paginationConfig = {
     currentPage: 1,
@@ -25,8 +34,9 @@ let paginationConfig = {
 
 // 更新分页UI
 function updatePagination() {
-    // 使用筛选后的数据或原始数据计算总视频数
-    const totalVideos = filteredData ? filteredData.length : videoData.length;
+    // 使用排序后的数据或筛选后的数据或原始数据计算总视频数
+    const currentData = sortedData || filteredData || videoData;
+    const totalVideos = currentData.length;
     const pageSize = paginationConfig.pageSize;
     const totalPages = Math.max(1, Math.ceil(totalVideos / pageSize));
     
@@ -202,8 +212,9 @@ function renderTableView() {
     
     tableBody.innerHTML = '';
     
-    // 获取当前需要使用的数据源（筛选后的或原始的）
-    const currentData = filteredData || videoData;
+    // 获取当前需要使用的数据源
+    // 优先使用排序后的数据，如果没有则使用筛选后的数据或原始数据
+    const currentData = sortedData || filteredData || videoData;
     
     // 如果没有视频数据，直接返回空表格
     if (currentData.length === 0) {
@@ -402,8 +413,9 @@ function renderGridView() {
     // 清空网格容器，释放旧的DOM节点
     grid.innerHTML = '';
     
-    // 获取当前需要使用的数据源（筛选后的或原始的）
-    const currentData = filteredData || videoData;
+    // 获取当前需要使用的数据源
+    // 优先使用排序后的数据，如果没有则使用筛选后的数据或原始数据
+    const currentData = sortedData || filteredData || videoData;
     
     // 如果没有视频数据，显示一个提示
     if (currentData.length === 0) {
@@ -669,6 +681,31 @@ function toggleView(e) {
     localStorage.setItem('preferredView', e.currentTarget.classList.contains('table-view-btn') ? 'table' : 'grid');
 }
 
+// 更新批量操作按钮的可见性
+function updateBatchActionsVisibility() {
+    // 获取批量操作浮窗
+    const batchOperationsFloat = document.getElementById('batch-operations-float');
+    
+    // 获取当前需要使用的数据源（筛选后的或原始的）
+    const currentData = filteredData || videoData;
+    
+    // 获取当前页的数据
+    const startIndex = (paginationConfig.currentPage - 1) * paginationConfig.pageSize;
+    const endIndex = Math.min(startIndex + paginationConfig.pageSize, currentData.length);
+    const currentPageVideos = currentData.slice(startIndex, endIndex);
+    
+    // 计算当前页选中的项目数
+    const selectedCount = currentPageVideos.filter(video => video.selected).length;
+    
+    if (selectedCount > 0) {
+        // 显示批量操作浮窗
+        batchOperationsFloat.classList.add('visible');
+    } else {
+        // 隐藏批量操作浮窗
+        batchOperationsFloat.classList.remove('visible');
+    }
+}
+
 // 更新选中计数
 function updateSelectedCount() {
     // 获取当前需要使用的数据源（筛选后的或原始的）
@@ -686,36 +723,6 @@ function updateSelectedCount() {
     const selectedCountElement = document.getElementById('selected-count');
     if (selectedCountElement) {
         selectedCountElement.textContent = `${selectedCount}/${currentPageVideos.length}`;
-    }
-}
-
-// 更新批量操作按钮的可见性
-function updateBatchActionsVisibility() {
-    const batchActions = document.getElementById('batch-actions');
-    
-    // 获取当前需要使用的数据源（筛选后的或原始的）
-    const currentData = filteredData || videoData;
-    
-    // 获取当前页的数据
-    const startIndex = (paginationConfig.currentPage - 1) * paginationConfig.pageSize;
-    const endIndex = Math.min(startIndex + paginationConfig.pageSize, currentData.length);
-    const currentPageVideos = currentData.slice(startIndex, endIndex);
-    
-    // 计算当前页选中的项目数
-    const selectedCount = currentPageVideos.filter(video => video.selected).length;
-    
-    if (selectedCount > 0) {
-        batchActions.classList.add('visible');
-        document.querySelector('.left-actions').style.display = 'none';
-    } else {
-        batchActions.classList.remove('visible');
-        document.querySelector('.left-actions').style.display = 'block';
-    }
-    
-    // 确保视图切换按钮始终在正确位置
-    const viewToggleButtons = document.querySelector('.view-toggle-buttons');
-    if (viewToggleButtons) {
-        viewToggleButtons.style.display = 'flex';
     }
 }
 
@@ -839,9 +846,11 @@ function onVideoDataChanged() {
     textFilteredData = null;
     conditionFilteredData = null;
     filteredData = null;
+    sortedData = null;
     
-    renderTableView();
-    renderGridView();
+    // 应用排序
+    sortAllData();
+    
     initViewState();
     
     // 更新总视频计数显示
@@ -880,17 +889,8 @@ function applyFilters() {
     // 重置到第一页
     paginationConfig.currentPage = 1;
     
-    // 更新视图和分页
-    renderTableView();
-    renderGridView();
-    updatePagination();
-    
-    // 更新总视频计数显示
-    const totalCountElement = document.getElementById('total-count');
-    if (totalCountElement) {
-        const totalVideos = filteredData ? filteredData.length : videoData.length;
-        totalCountElement.textContent = totalVideos;
-    }
+    // 应用排序
+    sortAllData();
 }
 
 // 设置文本筛选结果
@@ -934,16 +934,8 @@ function clearAllFilters() {
     // 重置到第一页
     paginationConfig.currentPage = 1;
     
-    // 更新视图和分页
-    renderTableView();
-    renderGridView();
-    updatePagination();
-    
-    // 更新总视频计数显示
-    const totalCountElement = document.getElementById('total-count');
-    if (totalCountElement) {
-        totalCountElement.textContent = videoData.length;
-    }
+    // 在清除筛选后应用排序
+    sortAllData();
 }
 
 // 设置筛选后的视频数据 (旧方法，保留用于兼容)
@@ -978,6 +970,12 @@ function getVideos() {
     return videoData;
 }
 
+// 排序视频数据 - 提供给其他模块调用的接口
+function sortVideos(field, direction) {
+    // 更新排序设置
+    updateSortSettings(field, direction);
+}
+
 // 导出函数供其他模块使用
 export {
     videoData,
@@ -998,7 +996,9 @@ export {
     getVideos,
     setTextFilter,
     setConditionFilter,
-    clearAllFilters
+    clearAllFilters,
+    sortVideos,
+    currentSortSettings
 };
 
 // 初始化时将这些方法挂载到window.videoData
@@ -1008,5 +1008,128 @@ window.videoData = {
     getVideos,
     setTextFilter,
     setConditionFilter,
-    clearAllFilters
+    clearAllFilters,
+    sortVideos
 };
+
+// 排序所有数据
+function sortAllData() {
+    console.log(`对数据进行全局排序: 字段=${currentSortSettings.field}, 方向=${currentSortSettings.direction}`);
+    
+    // 获取当前需要使用的数据源（筛选后的或原始的）
+    const dataToSort = filteredData || videoData;
+    
+    // 创建一个数组副本进行排序
+    const dataToSortCopy = [...dataToSort];
+    
+    // 根据字段类型选择不同的排序逻辑
+    switch(currentSortSettings.field) {
+        case 'fileName':
+        case 'code':
+        case 'collection':
+        case 'actors':
+        case 'notes':
+        case 'filePath':
+            // 文本字段排序
+            dataToSortCopy.sort((a, b) => {
+                const valueA = (a[currentSortSettings.field] || '').toString().toLowerCase();
+                const valueB = (b[currentSortSettings.field] || '').toString().toLowerCase();
+                return currentSortSettings.direction === 'asc' 
+                    ? valueA.localeCompare(valueB) 
+                    : valueB.localeCompare(valueA);
+            });
+            break;
+            
+        case 'rating':
+        case 'viewCount':
+        case 'fileSize':
+            // 数值字段排序
+            dataToSortCopy.sort((a, b) => {
+                const valueA = parseFloat(a[currentSortSettings.field]) || 0;
+                const valueB = parseFloat(b[currentSortSettings.field]) || 0;
+                return currentSortSettings.direction === 'asc' 
+                    ? valueA - valueB 
+                    : valueB - valueA;
+            });
+            break;
+            
+        case 'lastViewDate':
+        case 'createdAt':
+        case 'importDate':
+        case 'releaseDate':
+            // 日期字段排序
+            dataToSortCopy.sort((a, b) => {
+                const dateA = a[currentSortSettings.field] ? new Date(a[currentSortSettings.field]) : new Date(0);
+                const dateB = b[currentSortSettings.field] ? new Date(b[currentSortSettings.field]) : new Date(0);
+                
+                // 检查日期是否有效
+                const validDateA = !isNaN(dateA.getTime());
+                const validDateB = !isNaN(dateB.getTime());
+                
+                // 处理无效日期
+                if (!validDateA && !validDateB) return 0;
+                if (!validDateA) return currentSortSettings.direction === 'asc' ? 1 : -1;
+                if (!validDateB) return currentSortSettings.direction === 'asc' ? -1 : 1;
+                
+                return currentSortSettings.direction === 'asc' 
+                    ? dateA.getTime() - dateB.getTime() 
+                    : dateB.getTime() - dateA.getTime();
+            });
+            break;
+            
+        case 'resolution':
+            // 分辨率特殊处理
+            dataToSortCopy.sort((a, b) => {
+                const resA = (a.resolution || '').toString();
+                const resB = (b.resolution || '').toString();
+                
+                // 提取分辨率数值 (例如从 "1920x1080" 提取宽度和高度)
+                const matchA = resA.match(/(\d+)\s*[xX×]\s*(\d+)/);
+                const matchB = resB.match(/(\d+)\s*[xX×]\s*(\d+)/);
+                
+                // 计算像素总数作为比较基础
+                const pixelsA = matchA ? parseInt(matchA[1]) * parseInt(matchA[2]) : 0;
+                const pixelsB = matchB ? parseInt(matchB[1]) * parseInt(matchB[2]) : 0;
+                
+                return currentSortSettings.direction === 'asc' 
+                    ? pixelsA - pixelsB 
+                    : pixelsB - pixelsA;
+            });
+            break;
+            
+        default:
+            // 默认排序
+            dataToSortCopy.sort((a, b) => {
+                const valueA = (a[currentSortSettings.field] || '').toString().toLowerCase();
+                const valueB = (b[currentSortSettings.field] || '').toString().toLowerCase();
+                return currentSortSettings.direction === 'asc' 
+                    ? valueA.localeCompare(valueB) 
+                    : valueB.localeCompare(valueA);
+            });
+    }
+    
+    // 更新排序后的数据
+    sortedData = dataToSortCopy;
+    
+    console.log(`排序完成，共 ${sortedData.length} 条数据`);
+    
+    // 重置到第一页
+    paginationConfig.currentPage = 1;
+    
+    // 更新视图和分页
+    renderTableView();
+    renderGridView();
+    updatePagination();
+}
+
+// 更新排序设置
+function updateSortSettings(field, direction) {
+    console.log(`更新排序设置: 字段=${field}, 方向=${direction}`);
+    
+    // 更新排序设置
+    currentSortSettings.field = field;
+    currentSortSettings.direction = direction;
+    
+    // 执行排序
+    sortAllData();
+}

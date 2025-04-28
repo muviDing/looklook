@@ -110,30 +110,22 @@ function showFilterPopup() {
         }
     }
     
-    // 不使用动态定位，依赖CSS固定位置
+    // 设置浮窗位置，使其贴近筛选按钮
+    const btnRect = filterBtn.getBoundingClientRect();
+    popup.style.position = 'absolute';
+    popup.style.top = (btnRect.bottom + 5) + 'px';
+    popup.style.right = (window.innerWidth - btnRect.right) + 'px';
     
-    // 确保先把display设置为block
+    // 设置为显示状态
     backdrop.style.display = 'block';
     popup.style.display = 'block';
     
-    // 清除可能已存在的类和样式冲突
-    backdrop.classList.remove('active');
-    popup.classList.remove('active');
-    
-    // 强制重绘
-    backdrop.offsetHeight;
+    // 强制浏览器重绘
     popup.offsetHeight;
     
-    // 添加动画效果
-    setTimeout(() => {
-        console.log('添加active类');
-        backdrop.classList.add('active');
-        popup.classList.add('active');
-        
-        // 输出添加类后的状态
-        console.log('backdrop是否有active类:', backdrop.classList.contains('active'));
-        console.log('popup是否有active类:', popup.classList.contains('active'));
-    }, 10);
+    // 直接添加active类触发动画效果
+    backdrop.classList.add('active');
+    popup.classList.add('active');
 }
 
 // 隐藏筛选浮窗
@@ -147,11 +139,16 @@ function hideFilterPopup() {
     // 应用当前选中的筛选条件
     applyAdvancedFilter();
     
-    // 动画结束后隐藏元素
+    // 动画结束后隐藏元素并重置行内样式
     setTimeout(() => {
         backdrop.style.display = 'none';
         popup.style.display = 'none';
-    }, 300);
+        
+        // 移除行内定位样式，确保不影响下次显示
+        popup.style.position = '';
+        popup.style.top = '';
+        popup.style.right = '';
+    }, 200);
 }
 
 // 初始化筛选浮窗的事件
