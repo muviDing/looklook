@@ -144,6 +144,9 @@ function hideFilterPopup() {
     backdrop.classList.remove('active');
     popup.classList.remove('active');
     
+    // 应用当前选中的筛选条件
+    applyAdvancedFilter();
+    
     // 动画结束后隐藏元素
     setTimeout(() => {
         backdrop.style.display = 'none';
@@ -513,14 +516,29 @@ function clearActiveFilters() {
         activeFiltersContainer.style.display = 'none';
         activeFiltersContainer.style.borderBottom = 'none';
     }
+    
+    // 重置筛选值
+    selectedCollections = [];
+    selectedActors = [];
+    
+    // 清除条件筛选
+    window.videoData.setConditionFilter(null);
+    
+    // 清除筛选按钮上的计数
+    const filterCountElement = document.getElementById('filter-count');
+    if (filterCountElement) {
+        filterCountElement.style.display = 'none';
+    }
 }
 
 // 更新已选筛选条件显示
 function updateActiveFilters(filterData) {
-    clearActiveFilters();
-    
+    // 清除当前显示的筛选标签，但不重置实际的筛选状态
     const activeFiltersContainer = document.getElementById('active-filters');
     if (!activeFiltersContainer) return;
+    
+    // 清空容器但不清除筛选状态
+    activeFiltersContainer.innerHTML = '';
     
     // 检查是否有任何筛选条件
     const hasCollections = filterData.collections && filterData.collections.length > 0;
@@ -622,7 +640,7 @@ function applyAdvancedFilter() {
     // 更新筛选条件显示
     updateActiveFilters(filterData);
     
-    // 执行筛选
+    // 执行筛选 - 使用筛选条件更新视频列表
     applyFiltersToVideoList(filterData);
 }
 
@@ -630,24 +648,56 @@ function applyAdvancedFilter() {
 function applyFiltersToVideoList(filterData) {
     const videos = window.videoData.getVideos();
     
+    // 检查是否有任何筛选条件
+    const hasCollections = filterData.collections && filterData.collections.length > 0;
+    const hasActors = filterData.actors && filterData.actors.length > 0;
+    const hasActiveFilters = hasCollections || hasActors;
+    
+    // 如果没有筛选条件，清除条件筛选
+    if (!hasActiveFilters) {
+        window.videoData.setConditionFilter(null);
+        return;
+    }
+    
     // 根据筛选条件过滤视频
     const filteredVideos = videos.filter(video => {
         // 检查合集筛选
-        if (filterData.collections && filterData.collections.length > 0) {
-            if (!video.collection || !filterData.collections.includes(video.collection)) {
+        if (hasCollections) {
+            // 如果视频没有合集属性，则不符合条件
+            if (!video.collection) {
+                return false;
+            }
+            
+            // 将视频的合集转换为数组，处理可能的多值情况
+            const videoCollections = typeof video.collection === 'string' 
+                ? video.collection.split(/\s*,\s*/).map(c => c.trim()).filter(c => c)
+                : Array.isArray(video.collection) ? video.collection : [video.collection];
+            
+            // 检查是否至少有一个合集匹配 - 精确匹配整个值
+            const hasMatchingCollection = filterData.collections.some(collection =>
+                videoCollections.includes(collection)
+            );
+            
+            if (!hasMatchingCollection) {
                 return false;
             }
         }
         
         // 检查演员筛选
-        if (filterData.actors && filterData.actors.length > 0) {
-            if (!video.actors || !video.actors.length) {
+        if (hasActors) {
+            // 如果视频没有演员属性，则不符合条件
+            if (!video.actors) {
                 return false;
             }
             
-            // 检查是否至少有一个演员匹配
-            const hasMatchingActor = filterData.actors.some(actor => 
-                video.actors.includes(actor)
+            // 将视频的演员转换为数组，处理可能的多值情况
+            const videoActors = typeof video.actors === 'string' 
+                ? video.actors.split(/\s*,\s*/).map(a => a.trim()).filter(a => a)
+                : Array.isArray(video.actors) ? video.actors : [video.actors];
+            
+            // 检查是否至少有一个演员匹配 - 精确匹配整个值
+            const hasMatchingActor = filterData.actors.some(actor =>
+                videoActors.includes(actor)
             );
             
             if (!hasMatchingActor) {
@@ -659,36 +709,58 @@ function applyFiltersToVideoList(filterData) {
     });
     
     // 更新视频列表显示
-    window.videoData.setFilteredVideos(filteredVideos);
+    window.videoData.setConditionFilter(filteredVideos);
 }
 
 // 根据搜索词过滤视频
 function filterVideos(searchTerm) {
-    // 如果搜索词为空，显示所有视频
+    // 如果搜索词为空，清除文本筛选
     if (!searchTerm) {
-        renderTableView();
-        renderGridView();
+        window.videoData.setTextFilter(null); // 清除文本筛选
         return;
     }
     
+    // 从原始数据源获取视频数据
+    const videos = window.videoData.getVideos();
+    
     // 过滤视频数据
-    const filteredVideos = videoData.filter(video => {
-        // 在多个字段中搜索
+    const filteredVideos = videos.filter(video => {
+        // 在指定字段中搜索 - 使用模糊匹配（包含子字符串）
         return (
+            // 文件名 - 模糊匹配
             (video.fileName && video.fileName.toLowerCase().includes(searchTerm)) ||
+            
+            // 标题 - 模糊匹配
             (video.code && video.code.toLowerCase().includes(searchTerm)) ||
-            (video.series && video.series.toLowerCase().includes(searchTerm)) ||
-            (video.actors && video.actors.toLowerCase().includes(searchTerm)) ||
-            (video.notes && video.notes.toLowerCase().includes(searchTerm))
+            
+            // 合集 - 模糊匹配，考虑多值情况
+            (video.collection && (
+                typeof video.collection === 'string' 
+                    ? video.collection.toLowerCase().includes(searchTerm) 
+                    : Array.isArray(video.collection) 
+                        ? video.collection.some(c => c.toLowerCase().includes(searchTerm))
+                        : String(video.collection).toLowerCase().includes(searchTerm)
+            )) ||
+            
+            // 演员 - 模糊匹配，考虑多值情况
+            (video.actors && (
+                typeof video.actors === 'string' 
+                    ? video.actors.toLowerCase().includes(searchTerm) 
+                    : Array.isArray(video.actors) 
+                        ? video.actors.some(a => a.toLowerCase().includes(searchTerm))
+                        : String(video.actors).toLowerCase().includes(searchTerm)
+            )) ||
+            
+            // 备注 - 模糊匹配
+            (video.notes && video.notes.toLowerCase().includes(searchTerm)) ||
+            
+            // 文件路径 - 模糊匹配
+            (video.filePath && video.filePath.toLowerCase().includes(searchTerm))
         );
     });
     
-    // 使用过滤后的数据重新渲染视图
-    renderTableView(filteredVideos);
-    renderGridView(filteredVideos);
-    
-    // 更新显示的视频数量
-    document.getElementById('total-count').textContent = filteredVideos.length;
+    // 使用新的API更新文本筛选结果
+    window.videoData.setTextFilter(filteredVideos);
 }
 
 // 导出函数供主模块使用
