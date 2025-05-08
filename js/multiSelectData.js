@@ -1,15 +1,15 @@
 /**
  * 多选下拉框数据源管理
- * 负责管理合集和演员等数据源，确保F区域和H区域使用相同的数据
+ * 负责管理标签和演员等数据源，确保F区域和H区域使用相同的数据
  */
 
 /**
  * 枚举数据存储类
- * 管理合集和演员等数据的统一存储和同步
+ * 管理标签和演员等数据的统一存储和同步
  */
 class EnumDataStore {
     constructor() {
-        // 存储所有合集数据
+        // 存储所有标签数据
         this.collections = [];
         // 存储所有演员数据
         this.actors = [];
@@ -34,7 +34,7 @@ class EnumDataStore {
             console.log('初始化枚举数据存储...');
             await this.loadFromDatabase();
             this.initialized = true;
-            console.log(`枚举数据存储初始化完成: 合集=${this.collections.length}, 演员=${this.actors.length}`);
+            console.log(`枚举数据存储初始化完成: 标签=${this.collections.length}, 演员=${this.actors.length}`);
             return true;
         } catch (error) {
             console.error('初始化枚举数据存储失败:', error);
@@ -77,7 +77,7 @@ class EnumDataStore {
         const prevCollectionCount = this.collections.length;
         const prevActorsCount = this.actors.length;
         
-        // 提取合集数据
+        // 提取标签数据
         const collectionsSet = new Set(this.collections);
         videos.forEach(video => {
             // 从series字段提取
@@ -96,7 +96,7 @@ class EnumDataStore {
         });
         this.collections = Array.from(collectionsSet).sort();
         
-        // 提取演员数据 - 与合集数据完全分开处理
+        // 提取演员数据 - 与标签数据完全分开处理
         const actorsSet = new Set(this.actors);
         videos.forEach(video => {
             if (video.actors && typeof video.actors === 'string') {
@@ -115,7 +115,7 @@ class EnumDataStore {
         const actorsAdded = this.actors.length - prevActorsCount;
         
         if (collectionAdded > 0 || actorsAdded > 0) {
-            console.log(`数据源从视频中提取更新: 合集=${this.collections.length} (新增${collectionAdded}项), 演员=${this.actors.length} (新增${actorsAdded}项)`);
+            console.log(`数据源从视频中提取更新: 标签=${this.collections.length} (新增${collectionAdded}项), 演员=${this.actors.length} (新增${actorsAdded}项)`);
             this.notifyDataChange();
             return true;
         }
@@ -124,8 +124,8 @@ class EnumDataStore {
     }
 
     /**
-     * 获取所有合集数据
-     * @returns {Array} 合集数据数组的副本
+     * 获取所有标签数据
+     * @returns {Array} 标签数据数组的副本
      */
     getCollections() {
         return [...this.collections];
@@ -140,8 +140,8 @@ class EnumDataStore {
     }
 
     /**
-     * 添加新合集
-     * @param {string} collection 合集名称
+     * 添加新标签
+     * @param {string} collection 标签名称
      * @returns {Promise<boolean>} 是否添加成功
      */
     async addCollection(collection) {
@@ -162,12 +162,12 @@ class EnumDataStore {
         try {
             await window.electronAPI.saveEnumValues('collection', this.collections);
             this.notifyDataChange();
-            console.log(`已添加合集: ${trimmedCollection}`);
+            console.log(`已添加标签: ${trimmedCollection}`);
             return true;
         } catch (error) {
             // 同步失败，回滚内存数据
             this.collections = this.collections.filter(item => item !== trimmedCollection);
-            console.error(`添加合集[${trimmedCollection}]失败:`, error);
+            console.error(`添加标签[${trimmedCollection}]失败:`, error);
             return false;
         }
     }
@@ -206,8 +206,8 @@ class EnumDataStore {
     }
 
     /**
-     * 删除合集
-     * @param {string} collection 要删除的合集名称
+     * 删除标签
+     * @param {string} collection 要删除的标签名称
      * @returns {Promise<boolean>} 是否删除成功
      */
     async removeCollection(collection) {
@@ -225,12 +225,12 @@ class EnumDataStore {
         try {
             await window.electronAPI.saveEnumValues('collection', this.collections);
             this.notifyDataChange();
-            console.log(`已删除合集: ${collection}`);
+            console.log(`已删除标签: ${collection}`);
             return true;
         } catch (error) {
             // 同步失败，回滚内存数据
             this.collections = originalCollections;
-            console.error(`删除合集[${collection}]失败:`, error);
+            console.error(`删除标签[${collection}]失败:`, error);
             return false;
         }
     }
@@ -297,15 +297,15 @@ class EnumDataStore {
                 window.electronAPI.getEnumValues('actors') || []
             ]);
             
-            // 检查合集数据变化
+            // 检查标签数据变化
             if (collections.length > 0) {
                 const collectionDiff = this.compareArrays(this.collections, collections);
                 if (collectionDiff.added.length > 0 || collectionDiff.removed.length > 0) {
                     if (collectionDiff.added.length > 0) {
-                        console.log('发现新合集:', collectionDiff.added);
+                        console.log('发现新标签:', collectionDiff.added);
                     }
                     if (collectionDiff.removed.length > 0) {
-                        console.log('发现已删除合集:', collectionDiff.removed);
+                        console.log('发现已删除标签:', collectionDiff.removed);
                     }
                     dataChanged = true;
                     this.collections = [...collections].sort();
@@ -331,10 +331,10 @@ class EnumDataStore {
             
             // 只在数据有变化或强制更新时通知
             if (dataChanged || forceUpdate) {
-                console.log('数据已同步并更新: 合集数量=', this.collections.length, '演员数量=', this.actors.length);
+                console.log('数据已同步并更新: 标签数量=', this.collections.length, '演员数量=', this.actors.length);
                 this.notifyDataChange();
             } else {
-                console.log('数据已同步，无变化: 合集数量=', this.collections.length, '演员数量=', this.actors.length);
+                console.log('数据已同步，无变化: 标签数量=', this.collections.length, '演员数量=', this.actors.length);
             }
             
             // 释放同步锁
@@ -388,7 +388,7 @@ class EnumDataStore {
             timestamp: Date.now()
         };
         
-        console.log('通知数据变化: 合集=', this.collections.length, '演员=', this.actors.length);
+        console.log('通知数据变化: 标签=', this.collections.length, '演员=', this.actors.length);
         
         // 首先通知注册的直接监听器
         this.listeners.forEach(listener => {
@@ -417,7 +417,7 @@ const enumDataStore = new EnumDataStore();
 
 /**
  * 初始化数据源
- * @param {Array} initialCollections 初始合集数据
+ * @param {Array} initialCollections 初始标签数据
  * @param {Array} initialActors 初始演员数据
  */
 function initializeData(initialCollections = [], initialActors = []) {
@@ -443,8 +443,8 @@ function extractDataFromVideos(videos) {
 }
 
 /**
- * 添加新合集
- * @param {string} collection 合集名称
+ * 添加新标签
+ * @param {string} collection 标签名称
  * @returns {Promise<boolean>} 是否添加成功
  */
 async function addCollection(collection) {
@@ -461,8 +461,8 @@ async function addActor(actor) {
 }
 
 /**
- * 删除合集
- * @param {string} collection 要删除的合集
+ * 删除标签
+ * @param {string} collection 要删除的标签
  * @returns {Promise<boolean>} 是否删除成功
  */
 async function removeCollection(collection) {
@@ -489,8 +489,8 @@ async function syncDataFromEnum(forceUpdate = false) {
 }
 
 /**
- * 获取所有合集数据
- * @returns {Array} 合集数据数组
+ * 获取所有标签数据
+ * @returns {Array} 标签数据数组
  */
 function getCollections() {
     return enumDataStore.getCollections();
@@ -710,7 +710,7 @@ function createFilterMultiSelect(options) {
     const handleDataUpdate = function(e) {
         // 根据明确的数据类型判断是否需要更新
         if (componentType === 'collections') {
-            console.log('多选下拉框更新合集数据:', e.detail.collections.length);
+            console.log('多选下拉框更新标签数据:', e.detail.collections.length);
             updateDataSource(e.detail.collections);
         } 
         else if (componentType === 'actors') {

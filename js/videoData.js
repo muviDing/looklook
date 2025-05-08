@@ -278,14 +278,12 @@ function renderTableView() {
         
         checkboxCell.appendChild(checkbox);
         row.appendChild(checkboxCell);
-        
         // 文件名列
         const fileNameCell = document.createElement('td');
         fileNameCell.className = 'column-filename';
         fileNameCell.textContent = video.fileName;
         fileNameCell.title = video.fileName; // 添加title属性显示完整内容
-        row.appendChild(fileNameCell);
-        
+        row.appendChild(fileNameCell);        
         // 番号列
         const codeCell = document.createElement('td');
         codeCell.className = 'column-code';
@@ -293,12 +291,14 @@ function renderTableView() {
         codeCell.title = video.code || '-';
         row.appendChild(codeCell);
         
-        // 合集列
+        // 标签列
         const collectionCell = document.createElement('td');
         collectionCell.className = 'column-collection';
         collectionCell.textContent = video.collection || '-';
         collectionCell.title = video.collection || '-';
         row.appendChild(collectionCell);
+        
+
         
         // 演员列
         const actorsCell = document.createElement('td');
@@ -426,14 +426,6 @@ function renderGridView() {
         return;
     }
     
-    // 更新画廊视图的全选按钮状态
-    const selectAllGrid = document.getElementById('select-all-grid');
-    if (selectAllGrid) {
-        // 检查所有视频是否全部被选中
-        const allSelected = currentData.length > 0 && currentData.every(video => video.selected);
-        selectAllGrid.checked = allSelected;
-    }
-    
     // 计算当前页的数据 - 与表格视图使用相同的分页
     const startIndex = (paginationConfig.currentPage - 1) * paginationConfig.pageSize;
     const endIndex = Math.min(startIndex + paginationConfig.pageSize, currentData.length);
@@ -448,6 +440,14 @@ function renderGridView() {
     }
     
     console.log(`渲染当前页视频（画廊视图），从${startIndex}到${endIndex}，共${currentPageData.length}个`);
+    
+    // 更新画廊视图的全选按钮状态
+    const selectAllGrid = document.getElementById('select-all-grid');
+    if (selectAllGrid) {
+        // 检查当前页所有视频是否全部被选中
+        const allCurrentPageSelected = currentPageData.length > 0 && currentPageData.every(video => video.selected);
+        selectAllGrid.checked = allCurrentPageSelected;
+    }
     
     // 只渲染当前页的视频数据，而不是全部
     currentPageData.forEach(video => {
@@ -606,8 +606,7 @@ function renderGridView() {
                     }
                     
                     // 更新UI
-                    renderTableView();
-                    renderGridView();
+                    renderCurrentView();
                     updatePagination();
                     
                     // 更新总视频数量
@@ -657,25 +656,25 @@ function toggleView(e) {
     const tableContainer = document.querySelector('.table-container');
     const gridContainer = document.getElementById('video-grid');
     
+    // 获取当前使用的数据源
+    const currentData = sortedData || filteredData || videoData;
+    
     if (e.currentTarget.classList.contains('table-view-btn')) {
         // 切换到表格视图
         tableViewBtn.classList.add('active');
         gridViewBtn.classList.remove('active');
         tableContainer.classList.remove('hidden');
         gridContainer.classList.add('hidden');
-        
-        // 确保表格视图显示正确的数据
-        renderTableView();
     } else {
         // 切换到画廊视图
         gridViewBtn.classList.add('active');
         tableViewBtn.classList.remove('active');
         gridContainer.classList.remove('hidden');
         tableContainer.classList.add('hidden');
-        
-        // 确保画廊视图显示正确的数据
-        renderGridView();
     }
+    
+    // 确保两种视图都正确显示数据及其选中状态
+    renderCurrentView();
     
     // 保存当前视图状态到本地存储
     localStorage.setItem('preferredView', e.currentTarget.classList.contains('table-view-btn') ? 'table' : 'grid');
@@ -686,18 +685,10 @@ function updateBatchActionsVisibility() {
     // 获取批量操作浮窗
     const batchOperationsFloat = document.getElementById('batch-operations-float');
     
-    // 获取当前需要使用的数据源（筛选后的或原始的）
-    const currentData = filteredData || videoData;
+    // 使用updateSelectedCount函数返回的结果获取选中计数
+    const { totalSelectedCount } = updateSelectedCount();
     
-    // 获取当前页的数据
-    const startIndex = (paginationConfig.currentPage - 1) * paginationConfig.pageSize;
-    const endIndex = Math.min(startIndex + paginationConfig.pageSize, currentData.length);
-    const currentPageVideos = currentData.slice(startIndex, endIndex);
-    
-    // 计算当前页选中的项目数
-    const selectedCount = currentPageVideos.filter(video => video.selected).length;
-    
-    if (selectedCount > 0) {
+    if (totalSelectedCount > 0) {
         // 显示批量操作浮窗
         batchOperationsFloat.classList.add('visible');
     } else {
@@ -708,28 +699,25 @@ function updateBatchActionsVisibility() {
 
 // 更新选中计数
 function updateSelectedCount() {
-    // 获取当前需要使用的数据源（筛选后的或原始的）
-    const currentData = filteredData || videoData;
+    // 确保使用一致的数据源 - 优先使用排序后的数据
+    const currentData = sortedData || filteredData || videoData;
     
-    // 获取当前页的数据范围
-    const startIndex = (paginationConfig.currentPage - 1) * paginationConfig.pageSize;
-    const endIndex = Math.min(startIndex + paginationConfig.pageSize, currentData.length);
-    const currentPageVideos = currentData.slice(startIndex, endIndex);
-    
-    // 计算当前页选中的项目数
-    const selectedCount = currentPageVideos.filter(video => video.selected).length;
+    // 计算所有页面中选中的项目数
+    const totalSelectedCount = currentData.filter(video => video.selected).length;
     
     // 更新显示
     const selectedCountElement = document.getElementById('selected-count');
     if (selectedCountElement) {
-        selectedCountElement.textContent = `${selectedCount}/${currentPageVideos.length}`;
+        selectedCountElement.textContent = `${totalSelectedCount}`;
     }
+    
+    return { totalSelectedCount };
 }
 
 // 全选/取消全选
 function toggleSelectAll(checked) {
-    // 获取当前需要使用的数据源（筛选后的或原始的）
-    const currentData = filteredData || videoData;
+    // 确保使用一致的数据源 - 优先使用排序后的数据
+    const currentData = sortedData || filteredData || videoData;
     
     // 获取当前页的数据
     const startIndex = (paginationConfig.currentPage - 1) * paginationConfig.pageSize;
@@ -751,8 +739,8 @@ function toggleSelectAll(checked) {
 
 // 反选
 function invertSelection() {
-    // 获取当前需要使用的数据源（筛选后的或原始的）
-    const currentData = filteredData || videoData;
+    // 确保使用一致的数据源 - 优先使用排序后的数据
+    const currentData = sortedData || filteredData || videoData;
     
     // 获取当前页的数据
     const startIndex = (paginationConfig.currentPage - 1) * paginationConfig.pageSize;
@@ -816,8 +804,8 @@ function initViewState() {
     // 更新分页
     updatePagination();
     
-    // 获取当前需要使用的数据源（筛选后的或原始的）
-    const currentData = filteredData || videoData;
+    // 确保使用一致的数据源 - 优先使用排序后的数据
+    const currentData = sortedData || filteredData || videoData;
     
     // 更新全选按钮状态 - 检查当前页所有项是否都被选中
     const startIndex = (paginationConfig.currentPage - 1) * paginationConfig.pageSize;
@@ -1020,6 +1008,7 @@ function sortAllData() {
     const dataToSort = filteredData || videoData;
     
     // 创建一个数组副本进行排序
+    // 注意：这里只需要浅拷贝数组，但不能深拷贝对象，否则会丢失引用关系
     const dataToSortCopy = [...dataToSort];
     
     // 根据字段类型选择不同的排序逻辑
@@ -1117,8 +1106,7 @@ function sortAllData() {
     paginationConfig.currentPage = 1;
     
     // 更新视图和分页
-    renderTableView();
-    renderGridView();
+    renderCurrentView();
     updatePagination();
 }
 

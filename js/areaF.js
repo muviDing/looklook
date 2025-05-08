@@ -4,7 +4,7 @@
  */
 
 // 获取全局视频数据的引用以及渲染函数
-import { videoData, renderTableView, renderGridView } from './videoData.js';
+import { videoData, renderTableView, renderGridView, renderCurrentView, onVideoDataChanged } from './videoData.js';
 // 导入多选下拉组件
 import { initMultiSelect } from './multiselect.js';
 import { syncDataFromEnum, refreshFilterBubbles } from './multiSelectData.js';
@@ -40,8 +40,8 @@ async function initDetailDrawer() {
     
     // 初始化多选下拉组件
     try {
-        collectionSelect = await initMultiSelect('collection', 'collection', '搜索或添加新合集...');
-        console.log('初始化合集多选组件成功');
+        collectionSelect = await initMultiSelect('collection', 'collection', '搜索或添加新标签...');
+        console.log('初始化标签多选组件成功');
         
         actorsSelect = await initMultiSelect('actors', 'actors', '搜索或添加新演员...');
         console.log('初始化演员多选组件成功');
@@ -241,7 +241,7 @@ function openDetailDrawer(videoId) {
     // 填充编辑表单
     document.getElementById('detail-code').value = video.code || '';
     
-    // 使用多选组件设置合集值
+    // 使用多选组件设置标签值
     if (collectionSelect) {
         collectionSelect.setValue(video.collection || '');
     }
@@ -630,7 +630,7 @@ async function saveVideoDetails() {
     // 获取表单数据
     const code = document.getElementById('detail-code').value;
     
-    // 使用多选组件获取合集值
+    // 使用多选组件获取标签值
     let collection = '';
     if (collectionSelect) {
         collection = collectionSelect.getValue().join(',');
@@ -698,9 +698,13 @@ async function saveVideoDetails() {
         currentThumbnailUrl = thumbnailUrl;
         originalThumbnailUrl = thumbnailUrl;
         
-        // 重新渲染视图
-        renderTableView();
-        renderGridView();
+        // 触发视频数据变化事件，完整更新视图
+        if (typeof onVideoDataChanged === 'function') {
+            onVideoDataChanged();
+        } else {
+            // 如果找不到函数，则使用向后兼容的渲染方式
+            renderCurrentView();
+        }
         
         console.log('视频详情已保存');
         

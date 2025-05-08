@@ -66,7 +66,7 @@ function handleFilterBubblesRefresh() {
     const collections = getCollections();
     const actors = getActors();
     
-    console.log('刷新筛选气泡: 合集数量=', collections.length, '演员数量=', actors.length);
+    console.log('刷新筛选气泡: 标签数量=', collections.length, '演员数量=', actors.length);
     
     // 刷新气泡显示
     initCollectionBubbles(collections);
@@ -214,10 +214,10 @@ function initBubbleComponents() {
     const collections = getCollections();
     const actors = getActors();
     
-    console.log('合集数据源:', collections.length, '项');
+    console.log('标签数据源:', collections.length, '项');
     console.log('演员数据源:', actors.length, '项');
     
-    // 初始化合集气泡
+    // 初始化标签气泡
     initCollectionBubbles(collections);
     
     // 初始化演员气泡
@@ -227,18 +227,18 @@ function initBubbleComponents() {
     initBubbleSearch();
 }
 
-// 初始化合集气泡
+// 初始化标签气泡
 function initCollectionBubbles(collections) {
     const container = document.getElementById('filter-collection-bubble-container');
     if (!container) {
-        console.error('找不到合集气泡容器');
+        console.error('找不到标签气泡容器');
         return;
     }
     
     container.innerHTML = '';
     
     if (collections.length === 0) {
-        container.innerHTML = '<div class="filter-no-results">暂无合集数据</div>';
+        container.innerHTML = '<div class="filter-no-results">暂无标签数据</div>';
         return;
     }
     
@@ -285,7 +285,7 @@ function initActorsBubbles(actors) {
     });
 }
 
-// 切换合集选择状态
+// 切换标签选择状态
 function toggleCollectionSelection(collection, bubbleElement) {
     const index = selectedCollections.indexOf(collection);
     
@@ -321,7 +321,7 @@ function toggleActorSelection(actor, bubbleElement) {
     applyAdvancedFilter();
 }
 
-// 重置合集选择
+// 重置标签选择
 function resetCollectionBubbles() {
     selectedCollections = [];
     const bubbles = document.querySelectorAll('#filter-collection-bubble-container .filter-bubble');
@@ -341,7 +341,7 @@ function resetActorsBubbles() {
 
 // 初始化搜索功能
 function initBubbleSearch() {
-    // 合集搜索
+    // 标签搜索
     const collectionSearch = document.getElementById('collection-search');
     collectionSearch.addEventListener('input', (e) => {
         const searchTerm = e.target.value.toLowerCase();
@@ -356,7 +356,7 @@ function initBubbleSearch() {
     });
 }
 
-// 筛选合集气泡
+// 筛选标签气泡
 function filterCollectionBubbles(searchTerm) {
     const collections = getCollections();
     const filteredCollections = searchTerm 
@@ -368,7 +368,7 @@ function filterCollectionBubbles(searchTerm) {
     container.innerHTML = '';
     
     if (filteredCollections.length === 0) {
-        container.innerHTML = '<div class="filter-no-results">没有匹配的合集</div>';
+        container.innerHTML = '<div class="filter-no-results">没有匹配的标签</div>';
         return;
     }
     
@@ -444,7 +444,7 @@ function loadFiltersFromUrl() {
     }
 }
 
-// 刷新合集气泡选中状态
+// 刷新标签气泡选中状态
 function refreshCollectionBubbles() {
     const bubbles = document.querySelectorAll('#filter-collection-bubble-container .filter-bubble');
     bubbles.forEach(bubble => {
@@ -565,9 +565,9 @@ function updateActiveFilters(filterData) {
     label.textContent = '已选：';
     activeFiltersContainer.appendChild(label);
     
-    // 添加合集筛选条件
+    // 添加标签筛选条件
     if (hasCollections) {
-        const text = `合集: ${filterData.collections.join(', ')}`;
+        const text = `标签: ${filterData.collections.join(', ')}`;
         activeFiltersContainer.appendChild(createFilterTag(text, 'collections'));
     }
     
@@ -658,19 +658,19 @@ function applyFiltersToVideoList(filterData) {
     
     // 根据筛选条件过滤视频
     const filteredVideos = videos.filter(video => {
-        // 检查合集筛选
+        // 检查标签筛选
         if (hasCollections) {
-            // 如果视频没有合集属性，则不符合条件
+            // 如果视频没有标签属性，则不符合条件
             if (!video.collection) {
                 return false;
             }
             
-            // 将视频的合集转换为数组，处理可能的多值情况
+            // 将视频的标签转换为数组，处理可能的多值情况
             const videoCollections = typeof video.collection === 'string' 
                 ? video.collection.split(/\s*,\s*/).map(c => c.trim()).filter(c => c)
                 : Array.isArray(video.collection) ? video.collection : [video.collection];
             
-            // 检查是否至少有一个合集匹配 - 精确匹配整个值
+            // 检查是否至少有一个标签匹配 - 精确匹配整个值
             const hasMatchingCollection = filterData.collections.some(collection =>
                 videoCollections.includes(collection)
             );
@@ -730,7 +730,7 @@ function filterVideos(searchTerm) {
             // 标题 - 模糊匹配
             (video.code && video.code.toLowerCase().includes(searchTerm)) ||
             
-            // 合集 - 模糊匹配，考虑多值情况
+            // 标签 - 模糊匹配，考虑多值情况
             (video.collection && (
                 typeof video.collection === 'string' 
                     ? video.collection.toLowerCase().includes(searchTerm) 
