@@ -245,10 +245,14 @@ function renderTableView() {
     
     console.log(`渲染当前页视频，从${startIndex}到${endIndex}，共${currentPageData.length}个`);
     
-    // 恢复表头的复选框，避免表头显示异常
+    // 更新表头的复选框，避免表头显示异常
     const selectAllCheckbox = document.querySelector('#video-table th.checkbox-cell input');
     if (selectAllCheckbox) {
         selectAllCheckbox.style.display = '';
+        
+        // 计算所有视频是否全部选中
+        const allSelected = currentData.length > 0 && currentData.every(video => video.selected);
+        selectAllCheckbox.checked = allSelected;
     }
     
     currentPageData.forEach(video => {
@@ -297,9 +301,7 @@ function renderTableView() {
         collectionCell.textContent = video.collection || '-';
         collectionCell.title = video.collection || '-';
         row.appendChild(collectionCell);
-        
-
-        
+    
         // 演员列
         const actorsCell = document.createElement('td');
         actorsCell.className = 'column-actors';
@@ -418,13 +420,13 @@ function renderGridView() {
     const currentData = sortedData || filteredData || videoData;
     
     // 如果没有视频数据，显示一个提示
-    if (currentData.length === 0) {
-        const emptyMessage = document.createElement('div');
-        emptyMessage.className = 'w-full h-full flex items-center justify-center text-gray-500';
-        emptyMessage.textContent = '没有视频数据，请点击"导入视频"按钮添加视频';
-        grid.appendChild(emptyMessage);
-        return;
-    }
+    // if (currentData.length === 0) {
+    //     const emptyMessage = document.createElement('div');
+    //     emptyMessage.className = 'w-full h-full flex items-center justify-center text-gray-500';
+    //     emptyMessage.textContent = '没有视频数据，请点击"导入视频"按钮添加视频';
+    //     grid.appendChild(emptyMessage);
+    //     return;
+    // }
     
     // 计算当前页的数据 - 与表格视图使用相同的分页
     const startIndex = (paginationConfig.currentPage - 1) * paginationConfig.pageSize;
@@ -444,9 +446,9 @@ function renderGridView() {
     // 更新画廊视图的全选按钮状态
     const selectAllGrid = document.getElementById('select-all-grid');
     if (selectAllGrid) {
-        // 检查当前页所有视频是否全部被选中
-        const allCurrentPageSelected = currentPageData.length > 0 && currentPageData.every(video => video.selected);
-        selectAllGrid.checked = allCurrentPageSelected;
+        // 检查所有视频是否全部被选中，而不仅仅是当前页
+        const allSelected = currentData.length > 0 && currentData.every(video => video.selected);
+        selectAllGrid.checked = allSelected;
     }
     
     // 只渲染当前页的视频数据，而不是全部
@@ -702,7 +704,7 @@ function updateSelectedCount() {
     // 确保使用一致的数据源 - 优先使用排序后的数据
     const currentData = sortedData || filteredData || videoData;
     
-    // 计算所有页面中选中的项目数
+    // 计算所有已选中的视频数量
     const totalSelectedCount = currentData.filter(video => video.selected).length;
     
     // 更新显示
@@ -719,14 +721,10 @@ function toggleSelectAll(checked) {
     // 确保使用一致的数据源 - 优先使用排序后的数据
     const currentData = sortedData || filteredData || videoData;
     
-    // 获取当前页的数据
-    const startIndex = (paginationConfig.currentPage - 1) * paginationConfig.pageSize;
-    const endIndex = Math.min(startIndex + paginationConfig.pageSize, currentData.length);
-    
-    // 只更新当前页的数据
-    for (let i = startIndex; i < endIndex; i++) {
-        currentData[i].selected = checked;
-    }
+    // 全选或取消全选所有视频，而不仅仅是当前页
+    currentData.forEach(video => {
+        video.selected = checked;
+    });
     
     // 重新渲染两个视图，确保UI状态与数据一致
     renderTableView();
@@ -742,31 +740,26 @@ function invertSelection() {
     // 确保使用一致的数据源 - 优先使用排序后的数据
     const currentData = sortedData || filteredData || videoData;
     
-    // 获取当前页的数据
-    const startIndex = (paginationConfig.currentPage - 1) * paginationConfig.pageSize;
-    const endIndex = Math.min(startIndex + paginationConfig.pageSize, currentData.length);
-    
-    // 只反选当前页的数据
-    for (let i = startIndex; i < endIndex; i++) {
-        currentData[i].selected = !currentData[i].selected;
-    }
+    // 反选所有数据
+    currentData.forEach(video => {
+        video.selected = !video.selected;
+    });
     
     // 重新渲染两个视图，确保UI状态与数据一致
     renderTableView();
     renderGridView();
     
-    // 更新全选按钮状态 - 检查当前页所有项是否都被选中
-    const currentPageVideos = currentData.slice(startIndex, endIndex);
-    const allCurrentPageSelected = currentPageVideos.length > 0 && currentPageVideos.every(video => video.selected);
+    // 更新全选按钮状态 - 检查所有项是否都被选中
+    const allSelected = currentData.length > 0 && currentData.every(video => video.selected);
     
     const selectAllTable = document.getElementById('select-all-table');
     if (selectAllTable) {
-        selectAllTable.checked = allCurrentPageSelected;
+        selectAllTable.checked = allSelected;
     }
     
     const selectAllGrid = document.getElementById('select-all-grid');
     if (selectAllGrid) {
-        selectAllGrid.checked = allCurrentPageSelected;
+        selectAllGrid.checked = allSelected;
     }
     
     updateSelectedCount();
@@ -807,20 +800,17 @@ function initViewState() {
     // 确保使用一致的数据源 - 优先使用排序后的数据
     const currentData = sortedData || filteredData || videoData;
     
-    // 更新全选按钮状态 - 检查当前页所有项是否都被选中
-    const startIndex = (paginationConfig.currentPage - 1) * paginationConfig.pageSize;
-    const endIndex = Math.min(startIndex + paginationConfig.pageSize, currentData.length);
-    const currentPageVideos = currentData.slice(startIndex, endIndex);
-    const allCurrentPageSelected = currentPageVideos.length > 0 && currentPageVideos.every(video => video.selected);
+    // 更新全选按钮状态 - 检查所有视频是否都被选中
+    const allSelected = currentData.length > 0 && currentData.every(video => video.selected);
     
     const selectAllTable = document.getElementById('select-all-table');
     if (selectAllTable) {
-        selectAllTable.checked = allCurrentPageSelected;
+        selectAllTable.checked = allSelected;
     }
     
     const selectAllGrid = document.getElementById('select-all-grid');
     if (selectAllGrid) {
-        selectAllGrid.checked = allCurrentPageSelected;
+        selectAllGrid.checked = allSelected;
     }
     
     // 更新选中计数和批量操作按钮状态

@@ -23,67 +23,104 @@ function invertSelection() {
 
 // 批量移除功能
 async function batchRemove() {
-    // 获取当前页的范围
-    const startIndex = (paginationConfig.currentPage - 1) * paginationConfig.pageSize;
-    const endIndex = Math.min(startIndex + paginationConfig.pageSize, videoData.length);
+    // 使用当前所有数据（包括筛选后的）
+    const currentData = window.videoData.getVideos();
     
-    // 获取当前页选中的视频
-    const currentPageVideos = videoData.slice(startIndex, endIndex);
-    const selectedVideos = currentPageVideos.filter(video => video.selected);
+    // 获取所有选中的视频，而不仅仅是当前页的
+    const selectedVideos = currentData.filter(video => video.selected);
     
     if (selectedVideos.length === 0) {
-        alert('请先选择要移除的视频');
+        // 使用自定义提示对话框
+        showCustomAlert('请先选择要移除的视频');
         return;
     }
     
-    // 确认是否移除
-    const confirmMessage = `确定要移除当前页选中的 ${selectedVideos.length} 个视频记录吗？\n\n注意：这只会从管理器中移除记录，不会删除实际的视频文件。`;
-    if (!confirm(confirmMessage)) {
+    // 确认是否移除，使用自定义确认对话框
+    const confirmMessage = `即将从管理器中移除 ${selectedVideos.length} 个视频记录。此操作不会删除实际的视频文件，但会永久移除这些记录。`;
+    
+    // 使用自定义确认对话框，传递回调函数
+    showCustomConfirm('确认移除', confirmMessage, async (confirmed) => {
+        if (!confirmed) return;
+        
+        try {
+            // 逐个删除选中的视频
+            for (const video of selectedVideos) {
+                await window.electronAPI.deleteVideo(video.id);
+                
+                // 从本地数据中移除
+                const index = videoData.findIndex(v => v.id === video.id);
+                if (index !== -1) {
+                    videoData.splice(index, 1);
+                }
+            }
+            
+            // 更新UI
+            onVideoDataChanged();
+            
+            // 更新总视频数量
+            document.getElementById('total-count').textContent = videoData.length;
+            
+            console.log(`成功移除 ${selectedVideos.length} 个视频记录`);
+            
+            // // 显示成功提示，不自动关闭
+            // showCustomAlert(`已成功移除 ${selectedVideos.length} 个视频记录`, 'success', false);
+
+        } catch (error) {
+            console.error('批量移除视频失败:', error);
+            // 显示错误提示，不自动关闭
+            showCustomAlert('批量移除视频失败，请查看控制台了解详情', 'error', true);
+        }
+    });
+}
+
+// 批量迁移功能
+async function batchMove() {
+    // 使用当前所有数据（包括筛选后的）
+    const currentData = window.videoData.getVideos();
+    
+    // 获取所有选中的视频，而不仅仅是当前页的
+    const selectedVideos = currentData.filter(video => video.selected);
+    
+    if (selectedVideos.length === 0) {
+        // 使用自定义提示对话框
+        showCustomAlert('请先选择要迁移的视频');
         return;
     }
     
     try {
-        // 逐个删除选中的视频
-        for (const video of selectedVideos) {
-            await window.electronAPI.deleteVideo(video.id);
-            
-            // 从本地数据中移除
-            const index = videoData.findIndex(v => v.id === video.id);
-            if (index !== -1) {
-                videoData.splice(index, 1);
-            }
+        // 使用文件选择对话框选择目标文件夹
+        const result = await window.electronAPI.selectFile({
+            title: '选择目标文件夹',
+            properties: ['openDirectory']
+        });
+        
+        // 如果用户取消了选择
+        if (result.canceled || !result.filePaths || result.filePaths.length === 0) {
+            console.log('用户取消了目标文件夹选择');
+            return;
         }
+        
+        const targetFolder = result.filePaths[0];
+        console.log(`选择的目标文件夹: ${targetFolder}`);
+        
+        // 导入moveProgress模块并启动迁移操作
+        const { startMoveVideos } = await import('./moveProgress.js');
+        await startMoveVideos(selectedVideos, targetFolder);
+        
+        // 迁移操作完成后，重新获取视频数据
+        const allVideos = await window.electronAPI.getVideos();
+        
+        // 更新视频数据
+        videoData.length = 0;
+        videoData.push(...allVideos);
         
         // 更新UI
         onVideoDataChanged();
         
-        // 更新总视频数量
-        document.getElementById('total-count').textContent = videoData.length;
-        
-        console.log(`成功移除 ${selectedVideos.length} 个视频记录`);
     } catch (error) {
-        console.error('批量移除视频失败:', error);
-        alert('批量移除视频失败，请查看控制台了解详情');
+        console.error('批量迁移失败:', error);
+        showCustomAlert('批量迁移失败: ' + error.message, 'error');
     }
-}
-
-// 批量移动功能
-async function batchMove() {
-    // 获取当前页的范围
-    const startIndex = (paginationConfig.currentPage - 1) * paginationConfig.pageSize;
-    const endIndex = Math.min(startIndex + paginationConfig.pageSize, videoData.length);
-    
-    // 获取当前页选中的视频
-    const currentPageVideos = videoData.slice(startIndex, endIndex);
-    const selectedVideos = currentPageVideos.filter(video => video.selected);
-    
-    if (selectedVideos.length === 0) {
-        alert('请先选择要移动的视频');
-        return;
-    }
-    
-    // TODO: 实现批量移动功能
-    alert(`即将移动当前页选中的 ${selectedVideos.length} 个视频记录`);
 }
 
 // 表头设置功能
@@ -593,18 +630,6 @@ function initFunctionBar() {
         }
     });
     
-    // 批量操作按钮事件
-    document.querySelector('.batch-move-btn').addEventListener('click', function() {
-        console.log('批量移动');
-        batchMove();
-    });
-    
-    
-    document.querySelector('.batch-remove-btn').addEventListener('click', function() {
-        console.log('批量移除');
-        batchRemove();
-    });
-    
     // 初始化视图切换按钮
     initViewToggleButton();
     
@@ -789,11 +814,11 @@ function initBatchOperationsEvents() {
         invertSelectionBtn.addEventListener('click', invertSelection);
     }
     
-    // 批量移动按钮
+    // 批量迁移按钮
     const batchMoveBtn = document.querySelector('#batch-operations-float .batch-move-btn');
     if (batchMoveBtn) {
         batchMoveBtn.addEventListener('click', function() {
-            console.log('批量移动');
+            console.log('批量迁移');
             batchMove();
         });
     }
@@ -954,6 +979,188 @@ function positionSortSettingsFloat() {
     }
 }
 
+// 自定义确认对话框函数
+function showCustomConfirm(title, message, callback) {
+    // 创建或获取对话框容器
+    let dialogBackdrop = document.getElementById('custom-dialog-backdrop');
+    
+    // 如果不存在则创建
+    if (!dialogBackdrop) {
+        dialogBackdrop = document.createElement('div');
+        dialogBackdrop.id = 'custom-dialog-backdrop';
+        dialogBackdrop.className = 'custom-dialog-backdrop';
+        document.body.appendChild(dialogBackdrop);
+    }
+    
+    // 清空容器内容
+    dialogBackdrop.innerHTML = '';
+    
+    // 创建对话框
+    const dialogHtml = `
+        <div class="custom-dialog" id="custom-dialog">
+            <div class="custom-dialog-header">
+                <h3 class="custom-dialog-title">
+                    <i class="fas fa-exclamation-triangle custom-dialog-icon"></i>
+                    ${title}
+                </h3>
+            </div>
+            <div class="custom-dialog-body">
+                ${message}
+            </div>
+            <div class="custom-dialog-footer">
+                <button class="custom-dialog-btn cancel" id="dialog-cancel-btn">取消</button>
+                <button class="custom-dialog-btn confirm" id="dialog-confirm-btn">确认</button>
+            </div>
+        </div>
+    `;
+    
+    // 设置对话框内容
+    dialogBackdrop.innerHTML = dialogHtml;
+    
+    // 显示背景和对话框
+    dialogBackdrop.style.display = 'flex';
+    
+    // 获取对话框元素
+    const dialog = document.getElementById('custom-dialog');
+    
+    // 强制浏览器重绘
+    dialog.offsetHeight;
+    
+    // 添加可见性类触发动画
+    dialogBackdrop.classList.add('visible');
+    dialog.classList.add('visible');
+    
+    // 绑定按钮事件
+    document.getElementById('dialog-cancel-btn').addEventListener('click', () => {
+        closeCustomDialog();
+        if (callback) callback(false);
+    });
+    
+    document.getElementById('dialog-confirm-btn').addEventListener('click', () => {
+        closeCustomDialog();
+        if (callback) callback(true);
+    });
+    
+    // 点击背景关闭
+    dialogBackdrop.addEventListener('click', (e) => {
+        if (e.target === dialogBackdrop) {
+            closeCustomDialog();
+            if (callback) callback(false);
+        }
+    });
+}
+
+// 自定义提示对话框函数
+function showCustomAlert(message, type = 'warning', autoClose = true) {
+    // 创建或获取对话框容器
+    let dialogBackdrop = document.getElementById('custom-dialog-backdrop');
+    
+    // 如果不存在则创建
+    if (!dialogBackdrop) {
+        dialogBackdrop = document.createElement('div');
+        dialogBackdrop.id = 'custom-dialog-backdrop';
+        dialogBackdrop.className = 'custom-dialog-backdrop';
+        document.body.appendChild(dialogBackdrop);
+    }
+    
+    // 清空容器内容
+    dialogBackdrop.innerHTML = '';
+    
+    // 根据类型设置图标和标题
+    let icon = 'fa-exclamation-circle';
+    let title = '提示';
+    let iconColor = '#f59e0b'; // 默认警告颜色
+    
+    if (type === 'success') {
+        icon = 'fa-check-circle';
+        title = '成功';
+        iconColor = '#10b981'; // 绿色
+    } else if (type === 'error') {
+        icon = 'fa-times-circle';
+        title = '错误';
+        iconColor = '#ef4444'; // 红色
+    } else if (type === 'info') {
+        icon = 'fa-info-circle';
+        title = '信息';
+        iconColor = '#3b82f6'; // 蓝色
+    }
+    
+    // 创建对话框
+    const dialogHtml = `
+        <div class="custom-dialog" id="custom-dialog">
+            <div class="custom-dialog-header">
+                <h3 class="custom-dialog-title">
+                    <i class="fas ${icon} custom-dialog-icon" style="color: ${iconColor};"></i>
+                    ${title}
+                </h3>
+            </div>
+            <div class="custom-dialog-body">
+                ${message}
+            </div>
+            <div class="custom-dialog-footer">
+                <button class="custom-dialog-btn confirm" id="dialog-ok-btn" style="background-color: ${type === 'error' ? '#ef4444' : '#3b82f6'};">确定</button>
+            </div>
+        </div>
+    `;
+    
+    // 设置对话框内容
+    dialogBackdrop.innerHTML = dialogHtml;
+    
+    // 显示背景和对话框
+    dialogBackdrop.style.display = 'flex';
+    
+    // 获取对话框元素
+    const dialog = document.getElementById('custom-dialog');
+    
+    // 强制浏览器重绘
+    dialog.offsetHeight;
+    
+    // 添加可见性类触发动画
+    dialogBackdrop.classList.add('visible');
+    dialog.classList.add('visible');
+    
+    // 绑定按钮事件
+    document.getElementById('dialog-ok-btn').addEventListener('click', closeCustomDialog);
+    
+    // 点击背景关闭，只有当autoClose为true时才允许
+    if (autoClose) {
+        dialogBackdrop.addEventListener('click', (e) => {
+            if (e.target === dialogBackdrop) {
+                closeCustomDialog();
+            }
+        });
+    } else {
+        // 如果不允许自动关闭，点击背景不会关闭对话框
+        dialogBackdrop.addEventListener('click', (e) => {
+            if (e.target === dialogBackdrop) {
+                // 添加一个轻微晃动提示用户需要点击"确定"按钮
+                dialog.classList.add('shake');
+                setTimeout(() => {
+                    dialog.classList.remove('shake');
+                }, 500);
+                e.stopPropagation();
+            }
+        });
+    }
+}
+
+// 关闭自定义对话框
+function closeCustomDialog() {
+    const dialogBackdrop = document.getElementById('custom-dialog-backdrop');
+    const dialog = document.getElementById('custom-dialog');
+    
+    if (dialogBackdrop && dialog) {
+        // 移除动画类
+        dialogBackdrop.classList.remove('visible');
+        dialog.classList.remove('visible');
+        
+        // 延迟隐藏元素
+        setTimeout(() => {
+            dialogBackdrop.style.display = 'none';
+        }, 200);
+    }
+}
+
 // 导出函数供主模块使用
 export {
     initFunctionBar,
@@ -964,5 +1171,8 @@ export {
     applyColumnSettings,
     // 排序相关函数
     applySortSettings,
-    sortSettings
+    sortSettings,
+    // 对话框相关函数
+    showCustomAlert,
+    showCustomConfirm
 };

@@ -30,6 +30,20 @@ contextBridge.exposeInMainWorld('electronAPI', {
   selectFile: (options) => ipcRenderer.invoke('selectFile', options),
   copyImageToThumbnails: (sourcePath, newFileName) => ipcRenderer.invoke('copyImageToThumbnails', sourcePath, newFileName),
   
+  // 视频移动相关
+  moveVideos: (videos, targetFolder) => ipcRenderer.invoke('move-videos', videos, targetFolder),
+  pauseMoveVideos: () => ipcRenderer.send('pause-move-videos'),
+  resumeMoveVideos: () => ipcRenderer.send('resume-move-videos'),
+  onMoveProgress: (callback) => {
+    const progressListener = (event, progress) => {
+      callback(progress);
+    };
+    ipcRenderer.on('move-progress', progressListener);
+    return () => {
+      ipcRenderer.removeListener('move-progress', progressListener);
+    };
+  },
+  
   // 数据库操作
   saveVideo: (video) => ipcRenderer.invoke('save-video', video),
   saveVideos: (videos) => ipcRenderer.invoke('save-videos', videos),

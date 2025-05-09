@@ -468,6 +468,50 @@ function updateVideoViewInfo(filePath) {
     });
 }
 
+/**
+ * 更新视频文件路径
+ * @param {string} id 视频ID
+ * @param {string} newFilePath 新的文件路径
+ * @returns {Promise<boolean>} 操作是否成功
+ */
+async function updateVideoFilePath(id, newFilePath) {
+  try {
+    console.log(`更新视频ID: ${id} 的文件路径为: ${newFilePath}`);
+    
+    // 查找并更新视频
+    const video = videoCache.find(v => v.id === id);
+    if (!video) {
+      console.error(`找不到ID为 ${id} 的视频`);
+      return false;
+    }
+    
+    // 更新缓存中的路径
+    video.filePath = newFilePath;
+    
+    // 更新数据库中的记录
+    return new Promise((resolve, reject) => {
+      db.update(
+        { id: id },
+        { $set: { filePath: newFilePath } },
+        {},
+        (err, numReplaced) => {
+          if (err) {
+            console.error('更新视频文件路径失败:', err);
+            reject(err);
+            return;
+          }
+          
+          console.log(`成功更新 ${numReplaced} 条视频记录的文件路径`);
+          resolve(numReplaced > 0);
+        }
+      );
+    });
+  } catch (error) {
+    console.error('更新视频文件路径失败:', error);
+    throw error;
+  }
+}
+
 // 导出模块
 module.exports = {
     initDatabase,
@@ -482,5 +526,6 @@ module.exports = {
     getVideoCache: () => videoCache,
     getEnumValues,
     saveEnumValues,
-    addEnumValue
+    addEnumValue,
+    updateVideoFilePath
 };

@@ -82,26 +82,10 @@ function initVideoList() {
         selectAllTable.addEventListener('change', function() {
             const isChecked = this.checked;
             
-            // 获取当前页的数据范围
-            const startIndex = (paginationConfig.currentPage - 1) * paginationConfig.pageSize;
-            const endIndex = Math.min(startIndex + paginationConfig.pageSize, videoData.length);
-            
-            // 只更新当前页的数据
-            for (let i = startIndex; i < endIndex; i++) {
-                videoData[i].selected = isChecked;
-            }
-            
-            // 更新表格视图中的复选框 - 只针对当前页的项目
-            const tableRows = document.querySelectorAll('#video-table tbody tr');
-            tableRows.forEach(row => {
-                const checkbox = row.querySelector('.video-checkbox');
-                if (checkbox) {
-                    checkbox.checked = isChecked;
-                }
+            // 调用videoData中的全选函数，选择所有视频
+            import('./videoData.js').then(module => {
+                module.toggleSelectAll(isChecked);
             });
-            
-            updateSelectedCount();
-            updateBatchActionsVisibility();
         });
     }
     
@@ -111,40 +95,15 @@ function initVideoList() {
         selectAllGrid.addEventListener('change', function() {
             const isChecked = this.checked;
             
-            // 获取当前页的数据范围
-            const startIndex = (paginationConfig.currentPage - 1) * paginationConfig.pageSize;
-            const endIndex = Math.min(startIndex + paginationConfig.pageSize, videoData.length);
-            
-            // 只更新当前页的数据
-            for (let i = startIndex; i < endIndex; i++) {
-                videoData[i].selected = isChecked;
-            }
+            // 调用videoData中的全选函数，选择所有视频
+            import('./videoData.js').then(module => {
+                module.toggleSelectAll(isChecked);
+            });
             
             // 同步表格视图的全选按钮状态
             if (selectAllTable) {
                 selectAllTable.checked = isChecked;
             }
-            
-            // 更新画廊视图中的复选框 - 只针对当前页的项目
-            const gridCards = document.querySelectorAll('.video-card');
-            gridCards.forEach(card => {
-                const checkbox = card.querySelector('.video-card-checkbox');
-                if (checkbox) {
-                    checkbox.checked = isChecked;
-                }
-            });
-            
-            // 更新表格视图中的复选框 - 只针对当前页的项目
-            const tableRows = document.querySelectorAll('#video-table tbody tr');
-            tableRows.forEach(row => {
-                const checkbox = row.querySelector('.video-checkbox');
-                if (checkbox) {
-                    checkbox.checked = isChecked;
-                }
-            });
-            
-            updateSelectedCount();
-            updateBatchActionsVisibility();
         });
     }
     

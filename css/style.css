@@ -750,4 +750,137 @@
 
 .filter-tab-content.active {
     display: block;
+}
+
+/* 自定义确认对话框样式 */
+.custom-dialog-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.custom-dialog-backdrop.visible {
+    opacity: 1;
+}
+
+.custom-dialog {
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    width: 420px;
+    max-width: 90%;
+    padding: 0;
+    transform: translateY(-20px);
+    transition: transform 0.3s ease;
+    overflow: hidden;
+}
+
+.custom-dialog.visible {
+    transform: translateY(0);
+}
+
+.custom-dialog-header {
+    background-color: #f8fafc;
+    padding: 16px 20px;
+    border-bottom: 1px solid #e2e8f0;
+    position: relative;
+}
+
+.custom-dialog-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #334155;
+    margin: 0;
+    display: flex;
+    align-items: center;
+}
+
+.custom-dialog-body {
+    padding: 24px;
+    color: #4b5563;
+    font-size: 15px;
+    line-height: 1.6;
+}
+
+.custom-dialog-footer {
+    display: flex;
+    justify-content: flex-end;
+    padding: 16px 20px;
+    border-top: 1px solid #e2e8f0;
+    gap: 12px;
+    background-color: #f8fafc;
+}
+
+.custom-dialog-btn {
+    padding: 8px 20px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.custom-dialog-btn.cancel {
+    background-color: #f1f5f9;
+    color: #64748b;
+}
+
+.custom-dialog-btn.cancel:hover {
+    background-color: #e2e8f0;
+    transform: translateY(-1px);
+}
+
+.custom-dialog-btn.confirm {
+    background-color: #3b82f6;
+    color: white;
+}
+
+.custom-dialog-btn.confirm:hover {
+    background-color: #2563eb;
+    transform: translateY(-1px);
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+}
+
+.custom-dialog-icon {
+    margin-right: 12px;
+    font-size: 20px;
+}
+
+/* 添加弹跳效果 */
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+.custom-dialog.visible {
+    animation: pulse 0.3s ease-in-out;
+}
+
+/* 对话框晃动效果 */
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-5px); }
+    40%, 80% { transform: translateX(5px); }
+}
+
+.custom-dialog.shake {
+    animation: shake 0.5s ease-in-out;
 } 

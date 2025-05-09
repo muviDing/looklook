@@ -1,0 +1,43 @@
+/* 移动进度弹窗样式 */
+/* 大部分样式继承自importProgress.css，这里只添加特定的样式 */
+
+/* 目标文件夹信息样式 */
+.target-folder-info {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16px;
+  padding: 10px 15px;
+  background-color: #f9fafb;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+}
+
+.target-label {
+  font-weight: 500;
+  color: #374151;
+  margin-right: 8px;
+  white-space: nowrap;
+}
+
+.target-folder-path {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #6b7280;
+  font-family: monospace;
+  font-size: 14px;
+  padding: 2px 6px;
+}
+
+/* 等待移动数量的颜色 */
+.stat-item.pending .stat-count {
+  color: #6366f1; /* Indigo */
+}
+
+/* 确保与其他样式兼容 */
+.modal-overlay, .modal-container, .side-panel, .progress-container,
+.stats-container, .stat-item, .progress-bar, .progress-fill,
+.file-list, .tag, .btn, .side-panel-header, .side-panel-content {
+  /* 保持与importProgress.css中相同，CSS类选择器也需相同 */
+} 

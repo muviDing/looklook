@@ -656,6 +656,188 @@ function registerIpcHandlers() {
     }
   });
   
+  // 视频移动功能
+  let isMoveVideoCancelled = false;
+  let isMovePaused = false;
+  
+  // 监听暂停移动事件
+  ipcMain.on('pause-move-videos', () => {
+    console.log('用户暂停移动视频');
+    isMovePaused = true;
+    
+    // 发送暂停状态到渲染进程
+    if (mainWindow) {
+      mainWindow.webContents.send('move-progress', { paused: true });
+    }
+  });
+  
+  // 监听继续移动事件
+  ipcMain.on('resume-move-videos', () => {
+    console.log('用户继续移动视频');
+    isMovePaused = false;
+    
+    // 发送继续状态到渲染进程
+    if (mainWindow) {
+      mainWindow.webContents.send('move-progress', { paused: false });
+    }
+  });
+  
+  // 处理移动视频请求
+  ipcMain.handle('move-videos', async (event, videos, targetFolder) => {
+    console.log(`准备移动 ${videos.length} 个视频到 ${targetFolder}`);
+    
+    // 重置状态
+    isMoveVideoCancelled = false;
+    isMovePaused = false;
+    
+    // 统计信息
+    const total = videos.length;
+    let processed = 0;
+    let success = 0;
+    let failed = 0;
+    let pending = total;
+    const successList = [];
+    const failedList = [];
+    const pendingList = [...videos.map(v => ({
+      id: v.id,
+      fileName: v.fileName,
+      filePath: v.filePath
+    }))];
+    
+    // 发送初始进度信息
+    mainWindow.webContents.send('move-progress', {
+      targetFolder,
+      total,
+      processed: 0,
+      success: 0,
+      failed: 0,
+      pending,
+      percent: 0,
+      successList: [],
+      failedList: [],
+      pendingList,
+      isCompleted: false
+    });
+    
+    // 逐个处理视频
+    for (const video of videos) {
+      // 检查是否被取消
+      if (isMoveVideoCancelled) {
+        console.log('移动操作被用户取消');
+        
+        // 返回当前状态
+        return {
+          cancelled: true,
+          total,
+          processed,
+          success,
+          failed,
+          pending: total - processed,
+          successList,
+          failedList,
+          pendingList: pendingList.slice(processed)
+        };
+      }
+      
+      // 如果暂停，等待恢复
+      while (isMovePaused) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+      
+      try {
+        const sourceFilePath = video.filePath;
+        const fileName = path.basename(sourceFilePath);
+        const targetFilePath = path.join(targetFolder, fileName);
+        
+        // 更新待处理列表
+        const pendingIndex = pendingList.findIndex(item => item.id === video.id);
+        if (pendingIndex !== -1) {
+          pendingList.splice(pendingIndex, 1);
+        }
+        pending--;
+        
+        // 检查目标文件是否已存在
+        if (fs.existsSync(targetFilePath)) {
+          throw new Error('目标文件已存在');
+        }
+        
+        // 复制文件
+        await fs.promises.copyFile(sourceFilePath, targetFilePath);
+        
+        // 检查复制是否成功
+        if (fs.existsSync(targetFilePath)) {
+          // 删除原文件
+          await fs.promises.unlink(sourceFilePath);
+          
+          // 更新数据库记录
+          await db.updateVideoFilePath(video.id, targetFilePath);
+          
+          // 添加到成功列表
+          successList.push({
+            id: video.id,
+            fileName: video.fileName,
+            filePath: sourceFilePath,
+            newPath: targetFilePath
+          });
+          
+          success++;
+        } else {
+          throw new Error('文件复制失败');
+        }
+      } catch (error) {
+        console.error(`移动视频失败: ${video.fileName}, 错误: ${error.message}`);
+        
+        // 添加到失败列表
+        failedList.push({
+          id: video.id,
+          fileName: video.fileName,
+          filePath: video.filePath,
+          error: error.message
+        });
+        
+        failed++;
+      }
+      
+      // 更新进度
+      processed++;
+      const percent = Math.round((processed / total) * 100);
+      
+      // 发送进度更新到渲染进程
+      mainWindow.webContents.send('move-progress', {
+        targetFolder,
+        total,
+        processed,
+        success,
+        failed,
+        pending,
+        percent,
+        successList,
+        failedList,
+        pendingList,
+        isCompleted: processed === total
+      });
+      
+      // 短暂暂停，避免UI卡顿
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
+    
+    console.log(`移动完成: 总共 ${total} 个视频，成功 ${success} 个，失败 ${failed} 个`);
+    
+    // 返回最终结果
+    return {
+      targetFolder,
+      total,
+      processed,
+      success,
+      failed,
+      pending: 0,
+      successList,
+      failedList,
+      pendingList: [],
+      isCompleted: true
+    };
+  });
+  
   console.log('IPC事件处理程序注册完成');
 }
 
