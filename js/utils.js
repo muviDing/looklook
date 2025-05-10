@@ -219,5 +219,35 @@ function showCustomConfirm(options) {
   });
 }
 
+/**
+ * 从文件名中解析标题
+ * @param {string} filename - 文件名
+ * @param {string} regex - 正则表达式字符串
+ * @returns {string} 解析出的标题，解析失败则返回空字符串
+ */
+function parseTitleFromFilename(filename, regex) {
+  if (!regex || !filename) return '';
+  
+  try {
+    // 创建正则表达式对象，支持全局匹配
+    const regexObj = new RegExp(regex);
+    const match = filename.match(regexObj);
+    
+    // 如果有匹配，返回完整匹配（group(0)）
+    if (match && match[0]) {
+      return match[0].trim();
+    }
+    
+    // 匹配失败返回空字符串
+    return '';
+  } catch (error) {
+    console.error('解析标题时出错:', error);
+    return '';
+  }
+}
+
 // 导出函数
-export { showCustomConfirm }; 
+export { 
+  showCustomConfirm,
+  parseTitleFromFilename
+}; 

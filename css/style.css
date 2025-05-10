@@ -883,4 +883,122 @@
 
 .custom-dialog.shake {
     animation: shake 0.5s ease-in-out;
-} 
+}
+
+/* 输入框与按钮组合的容器 */
+.input-with-button {
+    display: flex;
+    align-items: center;
+}
+
+.input-with-button input {
+    flex: 1;
+}
+
+/* 小型按钮样式 */
+.small-btn {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 4px;
+    background-color: #f3f4f6;
+    border: 1px solid #d1d5db;
+    color: #6b7280;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.small-btn:hover {
+    background-color: #e5e7eb;
+    color: #4b5563;
+}
+
+.small-btn:active {
+    background-color: #d1d5db;
+}
+
+/* 右键菜单样式 */
+.video-context-menu {
+    position: absolute;
+    background-color: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+    padding: 8px 0;
+    min-width: 180px;
+    z-index: 1000;
+    overflow: visible;
+}
+
+.context-menu-item {
+    padding: 8px 16px;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    position: relative;
+    color: #374151;
+}
+
+.context-menu-item:hover {
+    background-color: #f3f4f6;
+}
+
+.context-menu-item.disabled {
+    color: #9ca3af;
+    cursor: not-allowed;
+}
+
+.context-menu-item.disabled:hover {
+    background-color: transparent;
+}
+
+.context-menu-item i {
+    margin-right: 8px;
+    font-size: 14px;
+    width: 16px;
+    text-align: center;
+}
+
+/* 有子菜单的菜单项 */
+.context-menu-item.has-submenu {
+    position: relative;
+}
+
+.context-menu-item.has-submenu .submenu-arrow {
+    position: absolute;
+    right: 12px;
+    margin-right: 0;
+    font-size: 12px;
+}
+
+/* 子菜单样式 */
+.context-submenu {
+    position: absolute;
+    left: 100%;
+    top: 0;
+    background-color: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+    padding: 8px 0;
+    min-width: 160px;
+    display: none;
+}
+
+.context-menu-item.has-submenu:hover .context-submenu {
+    display: block;
+}
+
+/* 快捷标签相关样式 */
+.settings-hint {
+    display: block;
+    margin-top: 4px;
+    margin-bottom: 12px;
+    font-size: 0.85rem;
+    color: #6b7280;
+}
+
+/* 如果在页面中有其他样式，添加到这里 */ 

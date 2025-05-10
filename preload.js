@@ -10,6 +10,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   // 视频管理
   importVideos: () => ipcRenderer.invoke('import-videos'),
+  importFolder: () => ipcRenderer.invoke('import-folder'),
   getVideos: () => ipcRenderer.invoke('get-videos'),
   openVideo: (filePath) => ipcRenderer.invoke('open-video', filePath),
   openSourceFolder: (filePath) => ipcRenderer.invoke('open-source-folder', filePath),
@@ -29,6 +30,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // 文件操作
   selectFile: (options) => ipcRenderer.invoke('selectFile', options),
   copyImageToThumbnails: (sourcePath, newFileName) => ipcRenderer.invoke('copyImageToThumbnails', sourcePath, newFileName),
+  
+  // 打开外部链接
+  openExternal: (url) => ipcRenderer.invoke('open-external', url),
   
   // 视频移动相关
   moveVideos: (videos, targetFolder) => ipcRenderer.invoke('move-videos', videos, targetFolder),
@@ -55,5 +59,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // 枚举值管理
   getEnumValues: (enumType) => ipcRenderer.invoke('get-enum-values', enumType),
   saveEnumValues: (enumType, values) => ipcRenderer.invoke('save-enum-values', enumType, values),
-  addEnumValue: (enumType, value) => ipcRenderer.invoke('add-enum-value', enumType, value)
+  addEnumValue: (enumType, value) => ipcRenderer.invoke('add-enum-value', enumType, value),
+  
+  // 设置管理
+  saveSettings: (settings) => ipcRenderer.invoke('save-settings', settings),
+  getSettings: () => ipcRenderer.invoke('get-settings'),
 });

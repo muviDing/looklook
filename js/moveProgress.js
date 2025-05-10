@@ -25,67 +25,67 @@ function createMoveProgressModal() {
       <div class="modal-body">
         <div class="target-folder-info">
           <div class="target-label">目标文件夹:</div>
-          <div id="target-folder-path" class="target-folder-path">等待选择...</div>
+          <div id="move-target-folder-path" class="target-folder-path">等待选择...</div>
         </div>
         
         <div class="progress-container">
           <div class="progress-bar">
-            <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+            <div class="progress-fill" id="move-progress-fill" style="width: 0%"></div>
           </div>
           <div class="progress-text">
-            <span>进度：<span id="progress-percent">0</span>%</span>
-            <span><span id="progress-processed">0</span>/<span id="progress-total">0</span></span>
+            <span>进度：<span id="move-progress-percent">0</span>%</span>
+            <span><span id="move-progress-processed">0</span>/<span id="move-progress-total">0</span></span>
           </div>
         </div>
         
         <div class="stats-container">
           <div class="stat-item success">
             <div class="stat-label">成功迁移</div>
-            <div class="stat-count" id="success-count" data-panel="success-panel">0</div>
+            <div class="stat-count" id="move-success-count" data-panel="move-success-panel">0</div>
           </div>
           <div class="stat-item failure">
             <div class="stat-label">迁移失败</div>
-            <div class="stat-count" id="failed-count" data-panel="failed-panel">0</div>
+            <div class="stat-count" id="move-failed-count" data-panel="move-failed-panel">0</div>
           </div>
           <div class="stat-item pending">
             <div class="stat-label">待迁移</div>
-            <div class="stat-count" id="pending-count" data-panel="pending-panel">0</div>
+            <div class="stat-count" id="move-pending-count" data-panel="move-pending-panel">0</div>
           </div>
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" id="pause-move-btn">暂停</button>
-        <button class="btn btn-primary" id="close-move-btn" disabled>关闭</button>
+        <button class="btn btn-secondary" id="move-pause-btn">暂停</button>
+        <button class="btn btn-primary" id="move-close-btn" disabled>关闭</button>
       </div>
       
       <!-- 侧边抽屉面板 -->
-      <div class="side-panel" id="success-panel">
+      <div class="side-panel" id="move-success-panel">
         <div class="side-panel-header">
           <div class="side-panel-title">成功迁移的文件</div>
           <button class="side-panel-close" aria-label="关闭面板">&times;</button>
         </div>
         <div class="side-panel-content">
-          <ul class="file-list" id="success-list"></ul>
+          <ul class="file-list" id="move-success-list"></ul>
         </div>
       </div>
       
-      <div class="side-panel" id="failed-panel">
+      <div class="side-panel" id="move-failed-panel">
         <div class="side-panel-header">
           <div class="side-panel-title">迁移失败的文件</div>
           <button class="side-panel-close" aria-label="关闭面板">&times;</button>
         </div>
         <div class="side-panel-content">
-          <ul class="file-list" id="failed-list"></ul>
+          <ul class="file-list" id="move-failed-list"></ul>
         </div>
       </div>
       
-      <div class="side-panel" id="pending-panel">
+      <div class="side-panel" id="move-pending-panel">
         <div class="side-panel-header">
           <div class="side-panel-title">待迁移的文件</div>
           <button class="side-panel-close" aria-label="关闭面板">&times;</button>
         </div>
         <div class="side-panel-content">
-          <ul class="file-list" id="pending-list"></ul>
+          <ul class="file-list" id="move-pending-list"></ul>
         </div>
       </div>
       
@@ -104,11 +104,11 @@ function createMoveProgressModal() {
 // 设置事件处理
 function setupEventListeners() {
   // 关闭按钮事件
-  const closeBtn = document.getElementById('close-move-btn');
+  const closeBtn = document.getElementById('move-close-btn');
   closeBtn.addEventListener('click', hideMoveProgressModal);
   
   // 暂停按钮事件
-  const pauseBtn = document.getElementById('pause-move-btn');
+  const pauseBtn = document.getElementById('move-pause-btn');
   pauseBtn.addEventListener('click', function() {
     const isPaused = pauseBtn.textContent === '继续';
     
@@ -188,18 +188,18 @@ function showMoveProgressModal() {
   
   // 获取元素
   const modal = document.getElementById('move-progress-modal');
-  const progressFill = document.getElementById('progress-fill');
-  const progressPercent = document.getElementById('progress-percent');
-  const progressProcessed = document.getElementById('progress-processed');
-  const progressTotal = document.getElementById('progress-total');
-  const successCount = document.getElementById('success-count');
-  const failedCount = document.getElementById('failed-count');
-  const pendingCount = document.getElementById('pending-count');
-  const successList = document.getElementById('success-list');
-  const failedList = document.getElementById('failed-list');
-  const pendingList = document.getElementById('pending-list');
-  const pauseBtn = document.getElementById('pause-move-btn');
-  const closeBtn = document.getElementById('close-move-btn');
+  const progressFill = document.getElementById('move-progress-fill');
+  const progressPercent = document.getElementById('move-progress-percent');
+  const progressProcessed = document.getElementById('move-progress-processed');
+  const progressTotal = document.getElementById('move-progress-total');
+  const successCount = document.getElementById('move-success-count');
+  const failedCount = document.getElementById('move-failed-count');
+  const pendingCount = document.getElementById('move-pending-count');
+  const successList = document.getElementById('move-success-list');
+  const failedList = document.getElementById('move-failed-list');
+  const pendingList = document.getElementById('move-pending-list');
+  const pauseBtn = document.getElementById('move-pause-btn');
+  const closeBtn = document.getElementById('move-close-btn');
   
   // 重置弹窗状态
   progressFill.style.width = '0%';
@@ -259,19 +259,19 @@ function setupProgressCallback() {
 // 更新进度显示
 function updateProgress(progress) {
   // 获取元素
-  const progressFill = document.getElementById('progress-fill');
-  const progressPercent = document.getElementById('progress-percent');
-  const progressProcessed = document.getElementById('progress-processed');
-  const progressTotal = document.getElementById('progress-total');
-  const successCount = document.getElementById('success-count');
-  const failedCount = document.getElementById('failed-count');
-  const pendingCount = document.getElementById('pending-count');
-  const successList = document.getElementById('success-list');
-  const failedList = document.getElementById('failed-list');
-  const pendingList = document.getElementById('pending-list');
-  const pauseBtn = document.getElementById('pause-move-btn');
-  const closeBtn = document.getElementById('close-move-btn');
-  const targetFolderPath = document.getElementById('target-folder-path');
+  const progressFill = document.getElementById('move-progress-fill');
+  const progressPercent = document.getElementById('move-progress-percent');
+  const progressProcessed = document.getElementById('move-progress-processed');
+  const progressTotal = document.getElementById('move-progress-total');
+  const successCount = document.getElementById('move-success-count');
+  const failedCount = document.getElementById('move-failed-count');
+  const pendingCount = document.getElementById('move-pending-count');
+  const successList = document.getElementById('move-success-list');
+  const failedList = document.getElementById('move-failed-list');
+  const pendingList = document.getElementById('move-pending-list');
+  const pauseBtn = document.getElementById('move-pause-btn');
+  const closeBtn = document.getElementById('move-close-btn');
+  const targetFolderPath = document.getElementById('move-target-folder-path');
   
   // 更新目标文件夹路径
   if (progress.targetFolder) {
@@ -377,11 +377,11 @@ function updateProgress(progress) {
     
     // 自动打开有问题的面板
     if (progress.failed > 0) {
-      setTimeout(() => openSidePanel('failed-panel'), 500);
+      setTimeout(() => openSidePanel('move-failed-panel'), 500);
     } else if (progress.success > 0) {
       // 如果没有失败但有成功，自动打开成功面板（如果成功数量不多，否则让用户自己点击）
       if (progress.success <= 10) {
-        setTimeout(() => openSidePanel('success-panel'), 500);
+        setTimeout(() => openSidePanel('move-success-panel'), 500);
       }
     }
   }

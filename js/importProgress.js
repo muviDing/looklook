@@ -25,62 +25,62 @@ function createImportProgressModal() {
       <div class="modal-body">
         <div class="progress-container">
           <div class="progress-bar">
-            <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+            <div class="progress-fill" id="import-progress-fill" style="width: 0%"></div>
           </div>
           <div class="progress-text">
-            <span>进度：<span id="progress-percent">0</span>%</span>
-            <span><span id="progress-processed">0</span>/<span id="progress-total">0</span></span>
+            <span>进度：<span id="import-progress-percent">0</span>%</span>
+            <span><span id="import-progress-processed">0</span>/<span id="import-progress-total">0</span></span>
           </div>
         </div>
         
         <div class="stats-container">
           <div class="stat-item success">
             <div class="stat-label">成功导入</div>
-            <div class="stat-count" id="success-count" data-panel="success-panel">0</div>
+            <div class="stat-count" id="import-success-count" data-panel="import-success-panel">0</div>
           </div>
           <div class="stat-item failure">
             <div class="stat-label">导入失败</div>
-            <div class="stat-count" id="failed-count" data-panel="failed-panel">0</div>
+            <div class="stat-count" id="import-failed-count" data-panel="import-failed-panel">0</div>
           </div>
           <div class="stat-item canceled">
             <div class="stat-label">已取消</div>
-            <div class="stat-count" id="canceled-count" data-panel="canceled-panel">0</div>
+            <div class="stat-count" id="import-canceled-count" data-panel="import-canceled-panel">0</div>
           </div>
         </div>
       </div>
       <div class="modal-footer">
-        <button class="btn btn-secondary" id="cancel-import-btn">取消</button>
-        <button class="btn btn-primary" id="confirm-import-btn" disabled>确定</button>
+        <button class="btn btn-secondary" id="import-cancel-btn">取消</button>
+        <button class="btn btn-primary" id="import-confirm-btn" disabled>确定</button>
       </div>
       
       <!-- 侧边抽屉面板 -->
-      <div class="side-panel" id="success-panel">
+      <div class="side-panel" id="import-success-panel">
         <div class="side-panel-header">
           <div class="side-panel-title">成功导入的文件</div>
           <button class="side-panel-close" aria-label="关闭面板">&times;</button>
         </div>
         <div class="side-panel-content">
-          <ul class="file-list" id="success-list"></ul>
+          <ul class="file-list" id="import-success-list"></ul>
         </div>
       </div>
       
-      <div class="side-panel" id="failed-panel">
+      <div class="side-panel" id="import-failed-panel">
         <div class="side-panel-header">
           <div class="side-panel-title">导入失败的文件</div>
           <button class="side-panel-close" aria-label="关闭面板">&times;</button>
         </div>
         <div class="side-panel-content">
-          <ul class="file-list" id="failed-list"></ul>
+          <ul class="file-list" id="import-failed-list"></ul>
         </div>
       </div>
       
-      <div class="side-panel" id="canceled-panel">
+      <div class="side-panel" id="import-canceled-panel">
         <div class="side-panel-header">
           <div class="side-panel-title">已取消导入的文件</div>
           <button class="side-panel-close" aria-label="关闭面板">&times;</button>
         </div>
         <div class="side-panel-content">
-          <ul class="file-list" id="canceled-list"></ul>
+          <ul class="file-list" id="import-canceled-list"></ul>
         </div>
       </div>
       
@@ -100,10 +100,10 @@ function createImportProgressModal() {
 function setupEventListeners() {
   // 获取元素
   const modal = document.getElementById('import-progress-modal');
-  const cancelBtn = document.getElementById('cancel-import-btn');
-  const confirmBtn = document.getElementById('confirm-import-btn');
-  const successCount = document.getElementById('success-count');
-  const failedCount = document.getElementById('failed-count');
+  const cancelBtn = document.getElementById('import-cancel-btn');
+  const confirmBtn = document.getElementById('import-confirm-btn');
+  const successCount = document.getElementById('import-success-count');
+  const failedCount = document.getElementById('import-failed-count');
   
   // 取消导入按钮
   cancelBtn.addEventListener('click', () => {
@@ -192,17 +192,17 @@ function showImportProgressModal() {
   
   // 获取元素
   const modal = document.getElementById('import-progress-modal');
-  const progressFill = document.getElementById('progress-fill');
-  const progressPercent = document.getElementById('progress-percent');
-  const progressProcessed = document.getElementById('progress-processed');
-  const progressTotal = document.getElementById('progress-total');
-  const successCount = document.getElementById('success-count');
-  const failedCount = document.getElementById('failed-count');
-  const canceledCount = document.getElementById('canceled-count');
-  const successList = document.getElementById('success-list');
-  const failedList = document.getElementById('failed-list');
-  const cancelBtn = document.getElementById('cancel-import-btn');
-  const confirmBtn = document.getElementById('confirm-import-btn');
+  const progressFill = document.getElementById('import-progress-fill');
+  const progressPercent = document.getElementById('import-progress-percent');
+  const progressProcessed = document.getElementById('import-progress-processed');
+  const progressTotal = document.getElementById('import-progress-total');
+  const successCount = document.getElementById('import-success-count');
+  const failedCount = document.getElementById('import-failed-count');
+  const canceledCount = document.getElementById('import-canceled-count');
+  const successList = document.getElementById('import-success-list');
+  const failedList = document.getElementById('import-failed-list');
+  const cancelBtn = document.getElementById('import-cancel-btn');
+  const confirmBtn = document.getElementById('import-confirm-btn');
   const modalContainer = document.querySelector('.modal-container');
   
   // 重置弹窗状态
@@ -263,18 +263,18 @@ function setupProgressCallback() {
 // 更新进度显示
 function updateProgress(progress) {
   // 获取元素
-  const progressFill = document.getElementById('progress-fill');
-  const progressPercent = document.getElementById('progress-percent');
-  const progressProcessed = document.getElementById('progress-processed');
-  const progressTotal = document.getElementById('progress-total');
-  const successCount = document.getElementById('success-count');
-  const failedCount = document.getElementById('failed-count');
-  const canceledCount = document.getElementById('canceled-count');
-  const successList = document.getElementById('success-list');
-  const failedList = document.getElementById('failed-list');
-  const canceledList = document.getElementById('canceled-list');
-  const cancelBtn = document.getElementById('cancel-import-btn');
-  const confirmBtn = document.getElementById('confirm-import-btn');
+  const progressFill = document.getElementById('import-progress-fill');
+  const progressPercent = document.getElementById('import-progress-percent');
+  const progressProcessed = document.getElementById('import-progress-processed');
+  const progressTotal = document.getElementById('import-progress-total');
+  const successCount = document.getElementById('import-success-count');
+  const failedCount = document.getElementById('import-failed-count');
+  const canceledCount = document.getElementById('import-canceled-count');
+  const successList = document.getElementById('import-success-list');
+  const failedList = document.getElementById('import-failed-list');
+  const canceledList = document.getElementById('import-canceled-list');
+  const cancelBtn = document.getElementById('import-cancel-btn');
+  const confirmBtn = document.getElementById('import-confirm-btn');
   
   // 处理取消导入的情况
   if (progress.cancelled) {
@@ -311,6 +311,36 @@ function updateProgress(progress) {
     // 在进度条下方显示已取消的状态
     const statusText = document.createElement('div');
     statusText.textContent = '导入已取消';
+    statusText.className = 'text-center text-gray-500 mt-2 mb-2';
+    
+    const progressContainer = document.querySelector('.progress-container');
+    // 确保我们不会重复添加状态文本
+    if (!document.querySelector('.progress-container .text-center')) {
+      progressContainer.appendChild(statusText);
+    }
+    
+    return;
+  }
+  
+  // 处理空文件夹的情况
+  if (progress.folderEmpty) {
+    // 更新UI状态为完成
+    progressFill.style.width = '100%';
+    progressPercent.textContent = '100';
+    progressProcessed.textContent = '0';
+    progressTotal.textContent = '0';
+    
+    // 修改取消按钮为确定按钮，便于用户关闭弹窗
+    cancelBtn.textContent = '确定';
+    cancelBtn.disabled = false;
+    confirmBtn.style.display = 'none';
+    
+    // 确保侧边面板已关闭
+    closeSidePanel();
+    
+    // 在进度条下方显示文件夹为空的状态
+    const statusText = document.createElement('div');
+    statusText.textContent = '所选文件夹中没有找到视频文件';
     statusText.className = 'text-center text-gray-500 mt-2 mb-2';
     
     const progressContainer = document.querySelector('.progress-container');
@@ -402,11 +432,11 @@ function updateProgress(progress) {
     
     // 自动打开有问题的面板
     if (progress.failed > 0) {
-      setTimeout(() => openSidePanel('failed-panel'), 500);
+      setTimeout(() => openSidePanel('import-failed-panel'), 500);
     } else if (progress.success > 0) {
       // 如果没有失败但有成功，自动打开成功面板（如果成功数量不多，否则让用户自己点击）
       if (progress.success <= 10) {
-        setTimeout(() => openSidePanel('success-panel'), 500);
+        setTimeout(() => openSidePanel('import-success-panel'), 500);
       }
     }
   }

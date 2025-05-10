@@ -62,6 +62,63 @@ function formatFileSize(bytes) {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
+// 添加获取设置的函数
+async function getSettings() {
+  try {
+    // 从本地文件加载设置
+    const settingsPath = path.join(process.env.APPDATA || process.env.HOME, 'zaigaikankanle', 'settings.json');
+    
+    // 检查设置文件是否存在
+    if (!fs.existsSync(settingsPath)) {
+      console.log('设置文件不存在，返回null');
+      return null;
+    }
+    
+    // 读取设置文件
+    const settingsData = fs.readFileSync(settingsPath, 'utf8');
+    const settings = JSON.parse(settingsData);
+    return settings;
+  } catch (error) {
+    console.error('加载设置失败:', error);
+    return null;
+  }
+}
+
+// 获取视频分辨率的函数
+function getVideoResolution(videoPath) {
+  return new Promise((resolve, reject) => {
+    try {
+      ffmpeg.ffprobe(videoPath, (err, metadata) => {
+        if (err) {
+          console.error('获取视频元数据失败:', err.message);
+          resolve(''); // 获取失败返回空字符串，但不影响导入流程
+          return;
+        }
+        
+        try {
+          // 从视频流中获取分辨率
+          const videoStream = metadata.streams.find(stream => stream.codec_type === 'video');
+          
+          if (videoStream && videoStream.width && videoStream.height) {
+            const resolution = `${videoStream.width}×${videoStream.height}`;
+            console.log(`视频分辨率: ${resolution}`);
+            resolve(resolution);
+          } else {
+            console.log('无法获取视频分辨率');
+            resolve('');
+          }
+        } catch (error) {
+          console.error('解析视频分辨率失败:', error.message);
+          resolve('');
+        }
+      });
+    } catch (error) {
+      console.error('调用ffprobe失败:', error.message);
+      resolve('');
+    }
+  });
+}
+
 // 生成视频缩略图的函数
 function generateThumbnail(videoPath, outputPath) {
   return new Promise((resolve, reject) => {
@@ -134,6 +191,471 @@ function registerIpcHandlers() {
   ipcMain.handle('get-videos', () => {
     console.log('处理get-videos请求');
     return db.getVideoCache();
+  });
+
+  // 递归查找文件夹中的所有视频文件
+  async function findVideoFiles(folderPath, videoExtensions = ['mp4', 'mkv', 'avi', 'mov', 'wmv', 'flv']) {
+    console.log(`搜索文件夹: ${folderPath}`);
+    const videoFiles = [];
+    
+    try {
+      const entries = fs.readdirSync(folderPath, { withFileTypes: true });
+      
+      for (const entry of entries) {
+        const fullPath = path.join(folderPath, entry.name);
+        
+        if (entry.isDirectory()) {
+          // 递归处理子文件夹
+          const subDirVideos = await findVideoFiles(fullPath, videoExtensions);
+          videoFiles.push(...subDirVideos);
+        } else if (entry.isFile()) {
+          // 检查是否为视频文件
+          const fileExt = path.extname(entry.name).toLowerCase().replace('.', '');
+          if (videoExtensions.includes(fileExt)) {
+            videoFiles.push(fullPath);
+          }
+        }
+      }
+    } catch (error) {
+      console.error(`读取文件夹 ${folderPath}.失败:`, error.message);
+    }
+    
+    return videoFiles;
+  }
+
+  // 导入文件夹中的所有视频
+  ipcMain.handle('import-folder', async () => {
+    console.log('处理import-folder请求');
+    if (!mainWindow) {
+      console.error('主窗口不存在');
+      return { cancelled: true, total: 0, processed: 0, success: 0, failed: 0, successList: [], failedList: [] };
+    }
+    
+    // 标记是否取消导入
+    let isCancelled = false;
+    
+    // 注册取消导入事件监听器
+    const cancelListener = () => {
+      isCancelled = true;
+      console.log('用户取消了导入过程');
+    };
+    
+    ipcMain.once('cancel-import', cancelListener);
+    
+    try {
+      const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
+        title: '选择包含视频的文件夹',
+        properties: ['openDirectory']
+      });
+
+      if (canceled || filePaths.length === 0) {
+        console.log('用户取消了选择或未选择任何文件夹');
+        // 发送取消状态到渲染进程
+        mainWindow.webContents.send('import-progress', {
+          cancelled: true,
+          total: 0,
+          processed: 0,
+          success: 0,
+          failed: 0,
+          percent: 0,
+          successList: [],
+          failedList: []
+        });
+        return { cancelled: true, total: 0, processed: 0, success: 0, failed: 0, successList: [], failedList: [] };
+      }
+      
+      const folderPath = filePaths[0];
+      console.log(`用户选择了文件夹: ${folderPath}`);
+      
+      // 发送初始进度状态（未知总数）
+      mainWindow.webContents.send('import-progress', {
+        total: 0,
+        processed: 0,
+        success: 0,
+        failed: 0,
+        percent: 0,
+        successList: [],
+        failedList: [],
+        scanningFolder: true
+      });
+      
+      // 递归查找文件夹中的所有视频文件
+      console.log(`开始搜索文件夹 ${folderPath} 中的视频文件`);
+      const videoFiles = await findVideoFiles(folderPath);
+      console.log(`在文件夹中找到 ${videoFiles.length} 个视频文件`);
+      
+      if (videoFiles.length === 0) {
+        console.log('文件夹中没有找到视频文件');
+        mainWindow.webContents.send('import-progress', {
+          cancelled: false,
+          total: 0,
+          processed: 0,
+          success: 0,
+          failed: 0,
+          percent: 100,
+          successList: [],
+          failedList: [],
+          scanningFolder: false,
+          folderEmpty: true
+        });
+        return { 
+          cancelled: false, 
+          total: 0,
+          processed: 0,
+          success: 0,
+          failed: 0,
+          successList: [],
+          failedList: [],
+          folderEmpty: true
+        };
+      }
+      
+      // 进度状态跟踪
+      const total = videoFiles.length;
+      let processed = 0;
+      let success = 0;
+      let failed = 0;
+      const successList = [];
+      const failedList = [];
+      
+      // 开始处理文件
+      mainWindow.webContents.send('import-progress', {
+        total,
+        processed: 0,
+        success: 0,
+        failed: 0,
+        percent: 0,
+        successList: [],
+        failedList: [],
+        scanningFolder: false
+      });
+      
+      // 确保缩略图目录存在
+      const thumbnailDir = path.join(__dirname, 'thumbnails');
+      if (!fs.existsSync(thumbnailDir)) {
+        fs.mkdirSync(thumbnailDir, { recursive: true });
+      }
+      
+      // 获取现有视频的文件路径列表，用于检查重复
+      const existingFilePaths = db.getVideoCache().map(video => video.filePath);
+      console.log(`当前数据库中有 ${existingFilePaths.length} 个视频记录`);
+      
+      // 规范化路径以便比较 - 统一处理为小写并标准化分隔符
+      const normalizePath = (p) => {
+        if (!p) return '';
+        // 将所有反斜杠(\)转换为正斜杠(/)，并转为小写，以便跨平台比较
+        return p.replace(/\\/g, '/').toLowerCase();
+      };
+      
+      // 规范化现有路径
+      const normalizedExistingPaths = existingFilePaths.map(normalizePath);
+      
+      // 过滤出新增的视频文件 - 使用规范化路径比较
+      const newFilePaths = videoFiles.filter(filePath => {
+        const normalizedPath = normalizePath(filePath);
+        return !normalizedExistingPaths.includes(normalizedPath);
+      });
+      
+      // 记录重复的视频文件
+      const duplicateFilePaths = videoFiles.filter(filePath => {
+        const normalizedPath = normalizePath(filePath);
+        return normalizedExistingPaths.includes(normalizedPath);
+      });
+      
+      console.log(`其中新增视频 ${newFilePaths.length} 个，重复视频 ${duplicateFilePaths.length} 个`);
+      
+      // 先处理重复的视频文件
+      for (const filePath of duplicateFilePaths) {
+        // 检查是否取消
+        if (isCancelled) {
+          console.log('导入过程被用户取消');
+          return {
+            cancelled: true,
+            total,
+            processed,
+            success,
+            failed,
+            successList,
+            failedList
+          };
+        }
+        
+        const normalizedPath = normalizePath(filePath);
+        const existingVideo = db.getVideoCache().find(v => 
+          normalizePath(v.filePath) === normalizedPath
+        );
+        
+        if (existingVideo) {
+          processed++;
+          success++;
+          successList.push({
+            fileName: existingVideo.fileName,
+            isNew: false
+          });
+          
+          // 发送进度更新
+          mainWindow.webContents.send('import-progress', {
+            total,
+            processed,
+            success,
+            failed,
+            percent: Math.round((processed / total) * 100),
+            successList,
+            failedList
+          });
+        }
+      }
+      
+      if (newFilePaths.length === 0) {
+        console.log('没有新增视频，无需导入');
+        return {
+          cancelled: false,
+          total,
+          processed,
+          success,
+          failed,
+          successList,
+          failedList
+        };
+      }
+      
+      // 处理新增的视频文件
+      const newVideos = [];
+      
+      // 分批处理视频文件，每批最多50个，避免内存问题
+      const batchSize = 50;
+      
+      for (let i = 0; i < newFilePaths.length; i += batchSize) {
+        const batch = newFilePaths.slice(i, i + batchSize);
+        
+        // 逐个处理视频文件
+        for (const filePath of batch) {
+          try {
+            // 检查是否取消
+            if (isCancelled) {
+              console.log('导入过程被用户取消');
+              // 如果有成功处理的视频，先保存它们
+              if (newVideos.length > 0) {
+                try {
+                  console.log(`用户取消导入，但仍保存 ${newVideos.length} 个已处理的视频`);
+                  const savedVideos = await db.saveVideos(newVideos);
+                  console.log(`成功保存 ${savedVideos.length} 个视频到数据库`);
+                } catch (error) {
+                  console.error('保存已处理视频失败:', error.message);
+                }
+              }
+              
+              // 发送最终取消状态到渲染进程
+              mainWindow.webContents.send('import-progress', {
+                cancelled: true,
+                total,
+                processed,
+                success,
+                failed,
+                canceled: total - processed, // 添加未处理的文件数量为取消数量
+                percent: Math.round((processed / total) * 100),
+                successList,
+                failedList
+              });
+              return {
+                cancelled: true,
+                total,
+                processed,
+                success,
+                failed,
+                canceled: total - processed, // 添加未处理的文件数量为取消数量
+                successList,
+                failedList
+              };
+            }
+            
+            const stats = fs.statSync(filePath);
+            // 使用时间戳+路径哈希确保ID唯一
+            const pathHash = Buffer.from(filePath).toString('base64').substring(0, 8);
+            const videoId = Date.now() + Math.floor(Math.random() * 1000) + '-' + pathHash;
+            const fileName = path.basename(filePath);
+            
+            // 生成缩略图文件名
+            const thumbnailFileName = `${videoId}.jpg`;
+            const thumbnailPath = path.join(thumbnailDir, thumbnailFileName);
+            
+            // 获取当前时间作为导入时间
+            const now = new Date();
+            const importDate = now.toISOString().replace('T', ' ').substr(0, 19);
+            
+            try {
+              // 获取设置
+              const settings = await getSettings();
+              
+              // 获取视频分辨率
+              const resolution = await getVideoResolution(filePath);
+              
+              // 根据设置解析标题
+              let code = '';
+              if (settings && settings.import && settings.import.titleRegex) {
+                try {
+                  const regexObj = new RegExp(settings.import.titleRegex);
+                  const match = fileName.match(regexObj);
+                  
+                  // 如果有匹配，返回完整匹配（group(0)）
+                  if (match && match[0]) {
+                    code = match[0].trim();
+                  }
+                } catch (error) {
+                  console.error('解析标题时出错:', error.message);
+                }
+              }
+              
+              // 生成缩略图
+              await generateThumbnail(filePath, thumbnailPath);
+              
+              // 创建视频对象
+              const videoObj = {
+                id: videoId,
+                fileName: fileName,
+                filePath: filePath,
+                fileSize: formatFileSize(stats.size),
+                createDate: new Date(stats.birthtime).toISOString().split('T')[0],
+                importDate: importDate,
+                viewCount: 0,
+                lastViewDate: '',
+                selected: false,
+                thumbnailUrl: `thumbnails/${thumbnailFileName}`,
+                rating: 0,
+                actors: '',
+                code: code,
+                collection: '',
+                resolution: resolution,
+                notes: '',
+                releaseDate: ''
+              };
+              
+              newVideos.push(videoObj);
+              
+              processed++;
+              success++;
+              successList.push({
+                fileName: fileName,
+                isNew: true
+              });
+            } catch (error) {
+              console.error(`为视频 ${fileName} 生成缩略图失败:`, error.message);
+              
+              // 获取设置
+              const settings = await getSettings();
+              
+              // 获取视频分辨率 - 即使缩略图失败也尝试获取
+              const resolution = await getVideoResolution(filePath);
+              
+              // 根据设置解析标题
+              let code = '';
+              if (settings && settings.import && settings.import.titleRegex) {
+                try {
+                  const regexObj = new RegExp(settings.import.titleRegex);
+                  const match = fileName.match(regexObj);
+                  
+                  // 如果有匹配，返回完整匹配（group(0)）
+                  if (match && match[0]) {
+                    code = match[0].trim();
+                  }
+                } catch (error) {
+                  console.error('解析标题时出错:', error.message);
+                }
+              }
+              
+              // 即使缩略图生成失败，也添加视频（使用默认缩略图）
+              const videoObj = {
+                id: videoId,
+                fileName: fileName,
+                filePath: filePath,
+                fileSize: formatFileSize(stats.size),
+                createDate: new Date(stats.birthtime).toISOString().split('T')[0],
+                importDate: importDate,
+                viewCount: 0,
+                lastViewDate: '',
+                selected: false,
+                thumbnailUrl: '',  // 空缩略图URL
+                rating: 0,
+                actors: '',
+                code: code,
+                collection: '',
+                resolution: resolution,
+                notes: '',
+                releaseDate: ''
+              };
+              
+              newVideos.push(videoObj);
+              
+              processed++;
+              success++;
+              successList.push({
+                fileName: fileName,
+                isNew: true,
+                warning: '缩略图生成失败'
+              });
+            }
+          } catch (error) {
+            console.error(`处理视频 ${filePath} 时出错:`, error.message);
+            processed++;
+            failed++;
+            failedList.push({
+              fileName: path.basename(filePath),
+              error: error.message
+            });
+          }
+          
+          // 发送进度更新
+          mainWindow.webContents.send('import-progress', {
+            total,
+            processed,
+            success,
+            failed,
+            percent: Math.round((processed / total) * 100),
+            successList,
+            failedList
+          });
+        }
+        
+        // 批处理结束后保存当前批次的视频，避免内存积累
+        if (newVideos.length > 0) {
+          try {
+            console.log(`保存当前批次的 ${newVideos.length} 个视频到数据库`);
+            const savedVideos = await db.saveVideos(newVideos);
+            console.log(`成功保存批次中的 ${savedVideos.length} 个视频到数据库`);
+            // 清空已保存的视频，准备下一批
+            newVideos.length = 0;
+          } catch (error) {
+            console.error('保存批次视频失败:', error.message);
+          }
+        }
+      }
+      
+      // 返回导入结果
+      return {
+        cancelled: isCancelled,
+        total,
+        processed,
+        success,
+        failed,
+        successList,
+        failedList
+      };
+    } catch (error) {
+      console.error('导入文件夹过程中出错:', error.message);
+      return {
+        error: error.message,
+        cancelled: false,
+        total: 0,
+        processed: 0,
+        success: 0,
+        failed: 0,
+        successList: [],
+        failedList: []
+      };
+    } finally {
+      // 确保清理取消导入的监听器
+      ipcMain.removeListener('cancel-import', cancelListener);
+    }
   });
 
   ipcMain.handle('import-videos', async () => {
@@ -348,6 +870,28 @@ function registerIpcHandlers() {
           const importDate = now.toISOString().replace('T', ' ').substr(0, 19);
           
           try {
+            // 获取设置
+            const settings = await getSettings();
+            
+            // 获取视频分辨率
+            const resolution = await getVideoResolution(filePath);
+            
+            // 根据设置解析标题
+            let code = '';
+            if (settings && settings.import && settings.import.titleRegex) {
+              try {
+                const regexObj = new RegExp(settings.import.titleRegex);
+                const match = fileName.match(regexObj);
+                
+                // 如果有匹配，返回完整匹配（group(0)）
+                if (match && match[0]) {
+                  code = match[0].trim();
+                }
+              } catch (error) {
+                console.error('解析标题时出错:', error.message);
+              }
+            }
+            
             // 生成缩略图
             await generateThumbnail(filePath, thumbnailPath);
             
@@ -365,9 +909,9 @@ function registerIpcHandlers() {
               thumbnailUrl: `thumbnails/${thumbnailFileName}`,
               rating: 0,
               actors: '',
-              code: '',
+              code: code,
               collection: '',
-              resolution: '',
+              resolution: resolution,
               notes: '',
               releaseDate: ''
             };
@@ -383,6 +927,35 @@ function registerIpcHandlers() {
           } catch (error) {
             console.error(`为视频 ${fileName} 生成缩略图失败:`, error.message);
             
+            // 获取设置
+            const settings = await getSettings();
+            
+            // 获取视频分辨率 - 即使缩略图失败也尝试获取
+            const resolution = await getVideoResolution(filePath);
+            
+            // 根据设置解析标题
+            let code = '';
+            if (settings && settings.import && settings.import.titleRegex) {
+              try {
+                // const regex = new RegExp(settings.import.titleRegex);
+                // const match = fileName.match(regex);
+                // if (match && match[1]) {
+                //   code = match[1].trim();
+                // } else if (match && match[0]) {
+                //   code = match[0].trim();
+                // }
+                const regexObj = new RegExp(settings.import.titleRegex);
+                const match = fileName.match(regexObj);
+                
+                // 如果有匹配，返回完整匹配（group(0)）
+                if (match && match[0]) {
+                  code = match[0].trim();
+                }
+              } catch (error) {
+                console.error('解析标题时出错:', error.message);
+              }
+            }
+            
             // 即使缩略图生成失败，也添加视频（使用默认缩略图）
             const videoObj = {
               id: videoId,
@@ -397,9 +970,9 @@ function registerIpcHandlers() {
               thumbnailUrl: '',  // 空缩略图URL
               rating: 0,
               actors: '',
-              code: '',
+              code: code,
               collection: '',
-              resolution: '',
+              resolution: resolution,
               notes: '',
               releaseDate: ''
             };
@@ -503,6 +1076,19 @@ function registerIpcHandlers() {
       return true;
     } catch (error) {
       console.error('打开源文件夹失败:', error);
+      return false;
+    }
+  });
+
+  // 打开外部链接
+  ipcMain.handle('open-external', async (event, url) => {
+    console.log(`打开外部链接: ${url}`);
+    try {
+      const { shell } = require('electron');
+      await shell.openExternal(url);
+      return true;
+    } catch (error) {
+      console.error('打开外部链接失败:', error);
       return false;
     }
   });
@@ -653,6 +1239,54 @@ function registerIpcHandlers() {
     } catch (error) {
       console.error(`添加枚举值[${value}]到[${enumType}]失败:`, error);
       throw error;
+    }
+  });
+  
+  // 设置管理
+  ipcMain.handle('save-settings', async (event, settings) => {
+    console.log('处理save-settings请求');
+    try {
+      // 保存设置到本地文件
+      const settingsPath = path.join(process.env.APPDATA || process.env.HOME, 'zaigaikankanle', 'settings.json');
+      
+      // 确保目录存在
+      const settingsDir = path.dirname(settingsPath);
+      if (!fs.existsSync(settingsDir)) {
+        fs.mkdirSync(settingsDir, { recursive: true });
+      }
+      
+      // 写入设置文件
+      fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2), 'utf8');
+      console.log(`设置已保存到 ${settingsPath}`);
+      
+      return true;
+    } catch (error) {
+      console.error('保存设置失败:', error);
+      throw error;
+    }
+  });
+  
+  ipcMain.handle('get-settings', async (event) => {
+    console.log('处理get-settings请求');
+    try {
+      // 从本地文件加载设置
+      const settingsPath = path.join(process.env.APPDATA || process.env.HOME, 'zaigaikankanle', 'settings.json');
+      
+      // 检查设置文件是否存在
+      if (!fs.existsSync(settingsPath)) {
+        console.log('设置文件不存在，返回null');
+        return null;
+      }
+      
+      // 读取设置文件
+      const settingsData = fs.readFileSync(settingsPath, 'utf8');
+      const settings = JSON.parse(settingsData);
+      console.log('设置已加载');
+      
+      return settings;
+    } catch (error) {
+      console.error('加载设置失败:', error);
+      return null;
     }
   });
   

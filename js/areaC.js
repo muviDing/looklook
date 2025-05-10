@@ -630,6 +630,47 @@ function initFunctionBar() {
         }
     });
     
+    // 导入文件夹按钮事件
+    document.querySelector('.import-folder-btn').addEventListener('click', async function() {
+        try {
+            // 导入导入进度模块
+            const { showImportProgressModal } = await import('./importProgress.js');
+            
+            // 显示导入进度弹窗
+            showImportProgressModal();
+            
+            // 开始导入文件夹
+            const result = await window.electronAPI.importFolder();
+            
+            // 检查导入结果
+            if (result.success > 0 || (result.cancelled && result.success > 0)) {
+                // 即使是取消的导入，只要有成功导入的视频，也重新获取所有视频数据
+                console.log(`导入文件夹结果: 总共 ${result.total} 个视频，成功 ${result.success} 个，失败 ${result.failed} 个${result.cancelled ? '，已取消 ' + (result.canceled || 0) + ' 个' : ''}`);
+                
+                // 重新获取所有视频数据
+                const allVideos = await window.electronAPI.getVideos();
+                
+                // 更新视频数据
+                videoData.length = 0;
+                videoData.push(...allVideos);
+                
+                // 更新UI
+                onVideoDataChanged();
+                
+                // 更新总视频数量
+                document.getElementById('total-count').textContent = videoData.length;
+                
+                console.log(`导入完成: 数据库中现在有 ${videoData.length} 个视频`);
+            } else if (result.cancelled) {
+                console.log(`用户取消了导入文件夹操作，没有成功导入的视频`);
+            } else {
+                console.log('没有成功导入的视频');
+            }
+        } catch (error) {
+            console.error('导入文件夹失败:', error);
+        }
+    });
+    
     // 初始化视图切换按钮
     initViewToggleButton();
     

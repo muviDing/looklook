@@ -3,7 +3,8 @@
  * 负责处理视频列表的渲染和交互，包括表格视图和画廊视图
  */
 
-import { videoData, renderTableView, renderGridView, updateSelectedCount, paginationConfig, updateBatchActionsVisibility } from './videoData.js';
+import { videoData, renderTableView, renderGridView, updateSelectedCount, paginationConfig, updateBatchActionsVisibility, renderCurrentView } from './videoData.js';
+import { openDetailDrawer } from './areaF.js';
 
 // 视图切换功能
 function toggleView(event) {
@@ -322,6 +323,63 @@ function setupVideoItemEvents() {
         });
         contextMenu.appendChild(playItem);
         
+        // 添加快捷标签菜单项
+        const quickTagsItem = document.createElement('div');
+        quickTagsItem.className = 'context-menu-item has-submenu';
+        quickTagsItem.innerHTML = '<i class="fas fa-tags mr-2"></i>快捷标签<i class="fas fa-chevron-right submenu-arrow"></i>';
+        
+        // 创建快捷标签子菜单
+        const quickTagsSubmenu = document.createElement('div');
+        quickTagsSubmenu.className = 'context-submenu';
+        quickTagsItem.appendChild(quickTagsSubmenu);
+        
+        // 获取当前设置中的快捷标签
+        let quickTags = [];
+        window.electronAPI.getSettings().then(settings => {
+            if (settings && settings.quickTags && Array.isArray(settings.quickTags)) {
+                quickTags = settings.quickTags;
+                
+                // 如果没有快捷标签，显示提示
+                if (quickTags.length === 0) {
+                    const noTagsItem = document.createElement('div');
+                    noTagsItem.className = 'context-menu-item disabled';
+                    noTagsItem.textContent = '未设置快捷标签';
+                    quickTagsSubmenu.appendChild(noTagsItem);
+                } else {
+                    // 添加每个快捷标签为子菜单项
+                    quickTags.forEach(tag => {
+                        const tagItem = document.createElement('div');
+                        tagItem.className = 'context-menu-item';
+                        tagItem.textContent = tag;
+                        
+                        // 点击标签时添加到视频
+                        tagItem.addEventListener('click', function() {
+                            closeContextMenu();
+                            if (currentVideo) {
+                                addTagToVideo(currentVideo.id, tag);
+                            }
+                        });
+                        
+                        quickTagsSubmenu.appendChild(tagItem);
+                    });
+                }
+            } else {
+                // 如果没有设置，显示提示
+                const noTagsItem = document.createElement('div');
+                noTagsItem.className = 'context-menu-item disabled';
+                noTagsItem.textContent = '未设置快捷标签';
+                quickTagsSubmenu.appendChild(noTagsItem);
+            }
+        }).catch(error => {
+            console.error('获取快捷标签设置失败:', error);
+            const errorItem = document.createElement('div');
+            errorItem.className = 'context-menu-item disabled';
+            errorItem.textContent = '加载标签失败';
+            quickTagsSubmenu.appendChild(errorItem);
+        });
+        
+        contextMenu.appendChild(quickTagsItem);
+        
         const editItem = document.createElement('div');
         editItem.className = 'context-menu-item';
         editItem.innerHTML = '<i class="fas fa-info-circle mr-2"></i>查看详情';
@@ -593,5 +651,59 @@ function renderTableRow(video) {
     // ... existing code ...
 }
 
+// 添加标签到视频
+async function addTagToVideo(videoId, tagToAdd) {
+    // 查找视频
+    const videoIndex = videoData.findIndex(v => v.id === videoId);
+    if (videoIndex === -1) {
+        console.error(`找不到视频: ${videoId}`);
+        return;
+    }
+    
+    const video = videoData[videoIndex];
+    
+    // 解析当前标签
+    const currentTags = video.collection ? 
+        video.collection.split(',').map(tag => tag.trim()).filter(Boolean) : [];
+    
+    // 检查标签是否已存在
+    if (currentTags.includes(tagToAdd)) {
+        console.log(`视频已有标签: ${tagToAdd}`);
+        return;
+    }
+    
+    // 添加新标签
+    currentTags.push(tagToAdd);
+    
+    // 更新视频对象
+    const updatedVideo = {
+        ...video,
+        collection: currentTags.join(',')
+    };
+    
+    try {
+        // 保存到数据库
+        await window.electronAPI.updateVideo(updatedVideo);
+        
+        // 更新本地数据
+        videoData[videoIndex] = updatedVideo;
+        
+        // 重新渲染视图
+        renderCurrentView();
+        
+        console.log(`已添加标签 "${tagToAdd}" 到视频: ${video.fileName}`);
+    } catch (error) {
+        console.error(`添加标签失败:`, error);
+    }
+}
+
 // 导出函数供主模块使用
-export { initVideoList, toggleView, setupVideoItemEvents };
+export {
+    toggleView,
+    initVideoList,
+    setupVideoItemEvents,
+    openSourceFolder,
+    playVideo,
+    editVideo,
+    addTagToVideo
+};

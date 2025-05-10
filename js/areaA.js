@@ -18,9 +18,11 @@ function initTitleBar() {
         window.electronAPI.closeWindow();
     });
     
-    document.getElementById('settings-btn').addEventListener('click', function() {
+    document.getElementById('settings-btn').addEventListener('click', async function() {
         console.log('打开设置');
-        // TODO: 实现设置面板
+        // 导入设置模块并显示设置弹窗
+        const { showSettingsModal } = await import('./settings.js');
+        showSettingsModal();
     });
 }
 

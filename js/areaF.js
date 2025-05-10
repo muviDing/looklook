@@ -88,6 +88,70 @@ async function initDetailDrawer() {
         }
     });
     
+    // 标题重新解析按钮事件
+    const reparseBtn = document.getElementById('reparse-title-btn');
+    if (reparseBtn) {
+        reparseBtn.addEventListener('click', async function() {
+            if (!currentVideoId) return;
+            
+            // 获取当前编辑的视频
+            const videoIndex = videoData.findIndex(v => v.id === currentVideoId);
+            if (videoIndex === -1) return;
+            
+            const video = videoData[videoIndex];
+            const fileName = video.fileName;
+            
+            try {
+                // 获取设置中的标题解析正则表达式
+                const settings = await window.electronAPI.getSettings();
+                
+                if (settings && settings.import && settings.import.titleRegex) {
+                    // 导入解析函数
+                    const { parseTitleFromFilename } = await import('./utils.js');
+                    
+                    // 解析标题
+                    const parsedTitle = parseTitleFromFilename(fileName, settings.import.titleRegex);
+                    
+                    if (parsedTitle) {
+                        // 更新表单中的标题
+                        document.getElementById('detail-code').value = parsedTitle;
+                        console.log(`成功解析标题: ${parsedTitle}`);
+                        
+                        // 显示成功提示
+                        import('./areaC.js').then(module => {
+                            if (typeof module.showCustomAlert === 'function') {
+                                module.showCustomAlert('标题已成功解析', 'success');
+                            }
+                        });
+                    } else {
+                        // 解析失败，提示用户
+                        console.log('无法使用当前正则表达式解析标题');
+                        import('./areaC.js').then(module => {
+                            if (typeof module.showCustomAlert === 'function') {
+                                module.showCustomAlert('无法使用当前正则表达式解析标题，请检查标题规则设置', 'warning');
+                            }
+                        });
+                    }
+                } else {
+                    // 未设置正则表达式，提示用户
+                    console.log('未设置标题解析正则表达式');
+                    import('./areaC.js').then(module => {
+                        if (typeof module.showCustomAlert === 'function') {
+                            module.showCustomAlert('未设置标题解析正则表达式，请先在设置中配置', 'info');
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error('重新解析标题时出错:', error);
+                import('./areaC.js').then(module => {
+                    if (typeof module.showCustomAlert === 'function') {
+                        module.showCustomAlert('解析标题时出错: ' + error.message, 'error');
+                    }
+                });
+            }
+        });
+    }
+    
     // 上映日期整个输入框的点击事件
     const dateInputGroup = document.querySelector('.date-input-group');
     if (dateInputGroup) {
