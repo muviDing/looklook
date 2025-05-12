@@ -669,6 +669,14 @@ async function addTagToVideo(videoId, tagToAdd) {
     // 检查标签是否已存在
     if (currentTags.includes(tagToAdd)) {
         console.log(`视频已有标签: ${tagToAdd}`);
+        
+        // 显示提示
+        import('./areaC.js').then(module => {
+            if (typeof module.showCustomAlert === 'function') {
+                module.showCustomAlert(`${video.fileName} 已存在标签 "${tagToAdd}" `, 'info');
+            }
+        });
+        
         return;
     }
     
@@ -688,12 +696,68 @@ async function addTagToVideo(videoId, tagToAdd) {
         // 更新本地数据
         videoData[videoIndex] = updatedVideo;
         
-        // 重新渲染视图
-        renderCurrentView();
+        // // 导入标签数据同步函数和筛选气泡更新函数
+        // const { syncDataFromEnum, refreshFilterBubbles } = await import('./multiSelectData.js');
+        
+        // // 同步枚举数据，确保新标签同步到所有组件
+        // await syncDataFromEnum(true);
+        
+        // // 刷新筛选气泡，确保新标签出现在筛选选项中
+        // await refreshFilterBubbles(true);
+        
+        // // 导入videoData模块，以获取最新的刷新方法
+        // const videoDataModule = await import('./videoData.js');
+        
+        // // 重置可能影响视图的过滤和排序状态
+        // if (typeof videoDataModule.onVideoDataChanged === 'function') {
+        //     // 触发数据变更事件，确保视图完全刷新
+        //     videoDataModule.onVideoDataChanged();
+        // }
+        
+        // // 重新渲染视图
+        // renderCurrentView();
+        
+        // 立即更新DOM - 找到当前视频的标签单元格并更新内容
+        const tableRow = document.querySelector(`#video-table tbody tr[data-video-id="${videoId}"]`);
+        if (tableRow) {
+            console.log(`找到视频行，ID=${videoId}`);
+            const collectionCell = tableRow.querySelector('.column-collection');
+            if (collectionCell) {
+                console.log(`找到标签单元格，正在更新内容：${updatedVideo.collection}`);
+                collectionCell.textContent = updatedVideo.collection || '-';
+                collectionCell.title = updatedVideo.collection || '-';
+            } else {
+                console.warn(`未找到标签单元格，行ID=${videoId}`);
+            }
+        } else {
+            console.warn(`未找到视频行，ID=${videoId}，可能不在当前页面显示`);
+        }
+        
+        // 使用setTimeout延迟再次刷新，确保DOM已完全更新
+        // setTimeout(() => {
+        //     renderCurrentView();
+        //     // 再次尝试直接更新DOM元素
+        //     const tableRowAfterTimeout = document.querySelector(`#video-table tbody tr[data-video-id="${videoId}"]`);
+        //     if (tableRowAfterTimeout) {
+        //         const collectionCellAfterTimeout = tableRowAfterTimeout.querySelector('.column-collection');
+        //         if (collectionCellAfterTimeout) {
+        //             collectionCellAfterTimeout.textContent = updatedVideo.collection || '-';
+        //             collectionCellAfterTimeout.title = updatedVideo.collection || '-';
+        //             console.log(`延迟更新成功: 标签内容已更新为 ${updatedVideo.collection}`);
+        //         }
+        //     }
+        // }, 100);
         
         console.log(`已添加标签 "${tagToAdd}" 到视频: ${video.fileName}`);
     } catch (error) {
         console.error(`添加标签失败:`, error);
+        
+        // 显示错误提示
+        import('./areaC.js').then(module => {
+            if (typeof module.showCustomAlert === 'function') {
+                module.showCustomAlert(`添加标签失败: ${error.message}`, 'error');
+            }
+        });
     }
 }
 

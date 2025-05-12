@@ -279,19 +279,341 @@ function saveSettings() {
 // 初始化快捷标签多选组件
 async function initQuickTagsComponent() {
   try {
+    console.log('开始初始化快捷标签组件...');
+    
+    /* 
+     * 改进说明:
+     * 1. 筛选记忆问题：维护一个完整的标签列表(allTags)，所有搜索均基于此列表，
+     *    而不是基于之前筛选的结果进行二次筛选
+     * 2. 持久化筛选问题：提供resetSearch函数并暴露给外部，在关闭设置弹窗或切换标签页时调用
+     * 3. 添加按钮功能：现在正确添加标签并更新UI，成功添加后清空搜索框并显示完整列表
+     * 4. 添加外部接口：组件现在通过container.resetSearch提供外部访问方法
+     */
+    
+    // 先检查DOM元素是否存在
+    const container = document.getElementById('quick-tags-container');
+    const tagsContainer = document.getElementById('quick-tags-tags');
+    const dropdown = document.getElementById('quick-tags-dropdown');
+    const searchInput = document.getElementById('quick-tags-search');
+    const addBtn = document.getElementById('quick-tags-add');
+    const itemsContainer = document.getElementById('quick-tags-items');
+    const hiddenInput = document.getElementById('quick-tags');
+    
+    if (!container || !tagsContainer || !dropdown || !searchInput || !addBtn || !itemsContainer || !hiddenInput) {
+      console.error('快捷标签DOM元素不完整:', {
+        container: !!container,
+        tagsContainer: !!tagsContainer,
+        dropdown: !!dropdown,
+        searchInput: !!searchInput,
+        addBtn: !!addBtn,
+        itemsContainer: !!itemsContainer,
+        hiddenInput: !!hiddenInput
+      });
+      return;
+    }
+    
+    console.log('快捷标签DOM元素检查完成，准备导入组件...');
+    
     // 导入多选组件
     const { initMultiSelect } = await import('./multiselect.js');
     
     // 导入数据同步函数
     const { syncDataFromEnum } = await import('./multiSelectData.js');
     
-    // 初始化快捷标签多选组件
-    const quickTagsSelect = await initMultiSelect('collection', 'quick-tags', '搜索或添加新标签...');
+    console.log('依赖模块加载完成，准备初始化多选组件...');
     
-    // 设置当前值
-    if (currentSettings.quickTags && Array.isArray(currentSettings.quickTags)) {
-      quickTagsSelect.setValue(currentSettings.quickTags);
+    // 存储所有可用标签的完整列表
+    let allTags = [];
+    
+    // 手动添加点击事件以确保下拉菜单可以打开
+    const inputContainer = container.querySelector('.multi-select-input-container');
+    if (inputContainer) {
+      inputContainer.addEventListener('click', function(e) {
+        console.log('快捷标签输入容器被点击');
+        dropdown.classList.toggle('open');
+        searchInput.focus();
+      });
     }
+    
+    // 防止搜索框的点击事件冒泡导致下拉框关闭
+    searchInput.addEventListener('click', function(e) {
+      console.log('快捷标签搜索框被点击');
+      e.stopPropagation();
+    });
+    
+    // 添加按钮点击事件
+    addBtn.addEventListener('click', function(e) {
+      console.log('快捷标签添加按钮被点击');
+      e.stopPropagation();
+      const value = searchInput.value.trim();
+      if (value) {
+        addTagToQuickTags(value);
+        // 清空搜索框
+        searchInput.value = '';
+        // 重新渲染下拉列表，显示所有选项
+        renderDropdownItems(allTags, '');
+      }
+    });
+    
+    // 添加搜索框回车事件
+    searchInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        console.log('快捷标签搜索框回车键被按下');
+        e.preventDefault();
+        const value = this.value.trim();
+        if (value) {
+          addTagToQuickTags(value);
+          // 清空搜索框
+          searchInput.value = '';
+          // 重新渲染下拉列表，显示所有选项
+          renderDropdownItems(allTags, '');
+        }
+      }
+    });
+    
+    // 添加文档点击事件关闭下拉框
+    document.addEventListener('click', function closeDropdown(e) {
+      if (!container.contains(e.target)) {
+        dropdown.classList.remove('open');
+      }
+    });
+    
+    // 添加标签到快捷标签的函数
+    async function addTagToQuickTags(tag) {
+      console.log(`尝试添加标签: ${tag}`);
+      
+      try {
+        // 确保标签不重复
+        const currentValue = hiddenInput.value;
+        const tags = currentValue ? currentValue.split(',').map(t => t.trim()) : [];
+        
+        if (tags.includes(tag)) {
+          console.log(`标签 "${tag}" 已存在，不重复添加`);
+          return;
+        }
+        
+        // 添加新标签
+        tags.push(tag);
+        hiddenInput.value = tags.join(',');
+        console.log(`成功添加标签: ${tag}, 当前所有标签: ${hiddenInput.value}`);
+        
+        // 更新显示
+        renderTags();
+        
+        // 如果全部标签列表中不包含这个新标签，添加到列表中
+        if (!allTags.includes(tag)) {
+          allTags.push(tag);
+          allTags.sort();
+        }
+        
+        // 同步到数据源
+        await syncDataFromEnum(true);
+        
+        // 同步到当前设置
+        currentSettings.quickTags = tags;
+      } catch (error) {
+        console.error('添加标签出错:', error);
+      }
+    }
+    
+    // 渲染标签的函数
+    function renderTags() {
+      console.log('渲染快捷标签...');
+      
+      // 清空标签容器
+      tagsContainer.innerHTML = '';
+      
+      // 获取当前标签列表
+      const currentValue = hiddenInput.value;
+      const tags = currentValue ? currentValue.split(',').map(t => t.trim()).filter(Boolean) : [];
+      
+      console.log(`正在渲染 ${tags.length} 个标签:`, tags);
+      
+      // 为每个标签创建元素
+      tags.forEach(tag => {
+        const tagElement = document.createElement('div');
+        tagElement.className = 'multi-select-tag';
+        
+        const tagText = document.createElement('span');
+        tagText.className = 'multi-select-tag-text';
+        tagText.textContent = tag;
+        tagElement.appendChild(tagText);
+        
+        const removeBtn = document.createElement('span');
+        removeBtn.className = 'multi-select-tag-remove';
+        removeBtn.innerHTML = '&times;';
+        removeBtn.addEventListener('click', function(e) {
+          e.stopPropagation();
+          removeTag(tag);
+        });
+        tagElement.appendChild(removeBtn);
+        
+        tagsContainer.appendChild(tagElement);
+      });
+    }
+    
+    // 移除标签的函数
+    function removeTag(tag) {
+      console.log(`移除标签: ${tag}`);
+      
+      // 获取当前标签列表
+      const currentValue = hiddenInput.value;
+      const tags = currentValue ? currentValue.split(',').map(t => t.trim()) : [];
+      
+      // 移除标签
+      const index = tags.indexOf(tag);
+      if (index !== -1) {
+        tags.splice(index, 1);
+        hiddenInput.value = tags.join(',');
+        console.log(`成功移除标签，当前所有标签: ${hiddenInput.value}`);
+        
+        // 更新显示
+        renderTags();
+        
+        // 更新当前设置
+        currentSettings.quickTags = tags;
+      }
+    }
+    
+    // 渲染下拉选项，接受完整的项目列表和筛选文本
+    function renderDropdownItems(items, filter = '') {
+      console.log(`渲染下拉选项，共 ${items.length} 项, 过滤条件: "${filter}"`);
+      
+      // 清空列表
+      itemsContainer.innerHTML = '';
+      
+      // 如果有过滤条件，过滤列表
+      let filteredItems = items;
+      if (filter) {
+        filteredItems = items.filter(item => 
+          item.toLowerCase().includes(filter.toLowerCase())
+        );
+        console.log(`过滤后剩余 ${filteredItems.length} 项`);
+      }
+      
+      // 如果没有匹配项
+      if (filteredItems.length === 0) {
+        const noResults = document.createElement('div');
+        noResults.className = 'multi-select-no-results';
+        noResults.textContent = filter ? '没有匹配的选项' : '没有可选项';
+        itemsContainer.appendChild(noResults);
+        return;
+      }
+      
+      // 获取当前已选值
+      const currentValue = hiddenInput.value;
+      const selectedItems = currentValue ? currentValue.split(',').map(t => t.trim()) : [];
+      
+      // 渲染每个选项
+      filteredItems.forEach(item => {
+        const itemElement = document.createElement('div');
+        itemElement.className = 'multi-select-item';
+        
+        if (selectedItems.includes(item)) {
+          itemElement.classList.add('selected');
+        }
+        
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.className = 'multi-select-checkbox';
+        checkbox.checked = selectedItems.includes(item);
+        itemElement.appendChild(checkbox);
+        
+        const itemText = document.createElement('span');
+        itemText.textContent = item;
+        itemElement.appendChild(itemText);
+        
+        // 点击项切换选中状态
+        itemElement.addEventListener('click', function() {
+          console.log(`选项 "${item}" 被点击`);
+          toggleItem(item);
+        });
+        
+        itemsContainer.appendChild(itemElement);
+      });
+    }
+    
+    // 切换选项选中状态
+    function toggleItem(item) {
+      console.log(`切换选项 "${item}" 的选中状态`);
+      
+      // 获取当前已选值
+      const currentValue = hiddenInput.value;
+      const selectedItems = currentValue ? currentValue.split(',').map(t => t.trim()).filter(Boolean) : [];
+      
+      // 切换选中状态
+      const index = selectedItems.indexOf(item);
+      if (index === -1) {
+        // 添加项目
+        selectedItems.push(item);
+        console.log(`添加标签 "${item}"`);
+      } else {
+        // 移除项目
+        selectedItems.splice(index, 1);
+        console.log(`移除标签 "${item}"`);
+      }
+      
+      // 更新隐藏输入值
+      hiddenInput.value = selectedItems.join(',');
+      console.log(`更新后的值: ${hiddenInput.value}`);
+      
+      // 更新显示
+      renderTags();
+      
+      // 重新渲染下拉列表
+      renderDropdownItems(allTags, searchInput.value);
+      
+      // 更新当前设置
+      currentSettings.quickTags = selectedItems;
+    }
+    
+    // 添加搜索框输入事件
+    searchInput.addEventListener('input', function() {
+      const searchValue = this.value.trim();
+      console.log(`搜索框输入: "${searchValue}"`);
+      
+      // 始终基于完整的标签列表进行筛选
+      renderDropdownItems(allTags, searchValue);
+    });
+    
+    // 重置搜索框和筛选状态的函数
+    function resetSearch() {
+      console.log('重置搜索框状态');
+      searchInput.value = '';
+      renderDropdownItems(allTags, '');
+    }
+    
+    // 初始化数据
+    async function initializeData() {
+      console.log('初始化快捷标签数据...');
+      
+      try {
+        // 从数据库加载所有标签
+        const collections = await window.electronAPI.getEnumValues('collection') || [];
+        console.log(`从数据库加载了 ${collections.length} 个标签`);
+        
+        // 存储完整的标签列表
+        allTags = [...collections].sort();
+        
+        // 初始化下拉列表
+        renderDropdownItems(allTags, '');
+        
+        // 初始化当前选中的值
+        if (currentSettings.quickTags && Array.isArray(currentSettings.quickTags)) {
+          hiddenInput.value = currentSettings.quickTags.join(',');
+          console.log(`设置初始值: ${hiddenInput.value}`);
+          renderTags();
+        }
+      } catch (error) {
+        console.error('初始化标签数据出错:', error);
+      }
+    }
+    
+    // 设置外部访问接口
+    container.resetSearch = resetSearch;
+    
+    // 初始化数据
+    await initializeData();
     
     // 确保标签数据同步刷新
     await syncDataFromEnum(true);
@@ -332,7 +654,11 @@ function setupSettingsEventListeners() {
   const zhihuLink = document.getElementById('zhihu-link');
   
   // 关闭按钮事件
-  closeBtn.addEventListener('click', hideSettingsModal);
+  closeBtn.addEventListener('click', function() {
+    // 重置快捷标签搜索状态
+    resetQuickTagsSearch();
+    hideSettingsModal();
+  });
   
   // 点击背景关闭弹窗
   backdrop.addEventListener('click', function(event) {
@@ -367,9 +693,10 @@ function setupSettingsEventListeners() {
       
       // 显示重置确认对话框
       import('./areaC.js').then(module => {
-        if (typeof module.showCustomAlert === 'function') {
-          module.showCustomAlert('确认重置', `确定要重置"${getSectionName(sectionId)}"栏目的所有设置吗？`, async (confirmed) => {
+        if (typeof module.showCustomConfirm === 'function') {
+          module.showCustomConfirm('确认重置', `确定要重置"${getSectionName(sectionId)}"栏目的所有设置吗？`, (confirmed) => {
             if (confirmed) {
+              console.log(`确认重置 ${sectionId} 栏目，执行重置操作`);
               // 执行重置
               if (sectionId === 'general') {
                 // 重置常规设置
@@ -384,10 +711,37 @@ function setupSettingsEventListeners() {
                 // 重置快捷标签设置
                 document.getElementById('quick-tags').value = '';
                 currentSettings.quickTags = [];
+                
+                // 重新渲染标签
+                const container = document.getElementById('quick-tags-container');
+                if (container && container.querySelector) {
+                  // 尝试找到并调用渲染标签的函数
+                  const tagsContainer = document.getElementById('quick-tags-tags');
+                  if (tagsContainer) {
+                    // 清空标签容器
+                    tagsContainer.innerHTML = '';
+                  }
+                  
+                  // 如果容器有重置搜索方法，调用它
+                  if (typeof container.resetSearch === 'function') {
+                    container.resetSearch();
+                  }
+                }
               }
+              
+              // 显示重置成功的提示
+              if (typeof module.showCustomAlert === 'function') {
+                module.showCustomAlert(`${getSectionName(sectionId)}栏目已重置`, 'success');
+              }
+            } else {
+              console.log(`取消重置 ${sectionId} 栏目`);
             }
           });
+        } else {
+          console.error('找不到showCustomConfirm函数');
         }
+      }).catch(error => {
+        console.error('加载areaC.js失败:', error);
       });
     });
   });
@@ -533,9 +887,23 @@ function setupSettingsEventListeners() {
     });
   });
   
+  // 重置快捷标签搜索状态的函数
+  function resetQuickTagsSearch() {
+    const container = document.getElementById('quick-tags-container');
+    if (container && typeof container.resetSearch === 'function') {
+      container.resetSearch();
+    }
+  }
+  
   // 导航选项卡切换事件
   navItems.forEach(item => {
     item.addEventListener('click', function() {
+      // 重置之前标签的搜索状态（如果是从快捷标签切换出去）
+      const previousActiveTab = document.querySelector('.settings-nav-item.active');
+      if (previousActiveTab && previousActiveTab.getAttribute('data-section') === 'quickTags') {
+        resetQuickTagsSearch();
+      }
+      
       // 移除所有导航项和内容区域的active类
       navItems.forEach(navItem => navItem.classList.remove('active'));
       document.querySelectorAll('.settings-section').forEach(section => {
@@ -550,6 +918,14 @@ function setupSettingsEventListeners() {
       const section = document.getElementById(`${sectionId}-section`);
       if (section) {
         section.classList.add('active');
+        
+        // 如果切换到快捷标签，确保初始化组件
+        if (sectionId === 'quickTags') {
+          console.log('导航切换到快捷标签，初始化组件');
+          setTimeout(() => {
+            initQuickTagsComponent();
+          }, 10);
+        }
       }
     });
   });
@@ -594,6 +970,14 @@ function showSettingsModal() {
   setTimeout(() => {
     backdrop.classList.add('visible');
     modal.classList.add('visible');
+    
+    // 显示弹窗后，确保快捷标签组件正确初始化
+    console.log('设置弹窗已显示，重新初始化快捷标签组件');
+    
+    // 等待DOM完全渲染后初始化
+    setTimeout(() => {
+      initQuickTagsComponent();
+    }, 100);
   }, 10);
 }
 
@@ -601,6 +985,12 @@ function showSettingsModal() {
 function hideSettingsModal() {
   const backdrop = document.getElementById('settings-backdrop');
   const modal = document.getElementById('settings-modal');
+  
+  // 重置快捷标签搜索状态
+  const container = document.getElementById('quick-tags-container');
+  if (container && typeof container.resetSearch === 'function') {
+    container.resetSearch();
+  }
   
   // 移除可见性类
   backdrop.classList.remove('visible');
