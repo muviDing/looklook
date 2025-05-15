@@ -47,6 +47,11 @@ async function batchRemove() {
             for (const video of selectedVideos) {
                 await window.electronAPI.deleteVideo(video.id);
                 
+                // 删除对应的预览图
+                if (video.thumbnailUrl) {
+                    await window.electronAPI.deleteThumbnail(video.thumbnailUrl);
+                }
+                
                 // 从本地数据中移除
                 const index = videoData.findIndex(v => v.id === video.id);
                 if (index !== -1) {
@@ -202,7 +207,6 @@ function applyColumnSettings() {
     
     // 获取表格所有列
     const tableHeaders = document.querySelectorAll('.video-table th:not(.checkbox-cell)');
-    const tableRows = document.querySelectorAll('.video-table tbody tr');
     
     // 遍历所有表头
     tableHeaders.forEach(th => {
@@ -214,15 +218,12 @@ function applyColumnSettings() {
             // 设置表头可见性
             th.style.display = isVisible ? '' : 'none';
             
-            // 获取该列的索引
-            const columnIndex = Array.from(th.parentElement.children).indexOf(th);
+            // 获取该列对应的所有单元格
+            const cells = document.querySelectorAll(`.video-table td.${columnClass}`);
             
-            // 设置所有行中对应单元格的可见性
-            tableRows.forEach(row => {
-                const cell = row.children[columnIndex];
-                if (cell) {
-                    cell.style.display = isVisible ? '' : 'none';
-                }
+            // 设置所有单元格可见性
+            cells.forEach(cell => {
+                cell.style.display = isVisible ? '' : 'none';
             });
         }
     });
@@ -252,7 +253,7 @@ function bindColumnSettingsEvents() {
             // 保存设置
             saveColumnSettings();
             
-            // 应用设置
+            // 应用设置到表格
             applyColumnSettings();
         });
     });

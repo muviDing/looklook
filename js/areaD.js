@@ -402,9 +402,65 @@ function setupVideoItemEvents() {
         });
         contextMenu.appendChild(folderItem);
         
-        // 设置菜单位置
-        contextMenu.style.top = `${y}px`;
-        contextMenu.style.left = `${x}px`;
+        // 计算菜单位置（智能定位）
+        contextMenu.style.display = 'block'; // 临时显示以获取宽度
+        
+        // 获取菜单实际尺寸
+        const menuWidth = contextMenu.offsetWidth;
+        const menuHeight = contextMenu.offsetHeight;
+        
+        // 获取窗口尺寸
+        const windowWidth = window.innerWidth;
+        const windowHeight = window.innerHeight;
+        
+        // 计算右侧可用空间
+        const rightSpace = windowWidth - x;
+        
+        // 判断是否应该显示在左侧
+        const showOnLeft = rightSpace < menuWidth + 20; // 20px为安全边距
+        
+        if (showOnLeft) {
+            // 显示在鼠标左侧
+            contextMenu.style.left = `${x - menuWidth}px`;
+            contextMenu.classList.add('left-position');
+        } else {
+            // 显示在鼠标右侧
+            contextMenu.style.left = `${x}px`;
+            contextMenu.classList.remove('left-position');
+        }
+        
+        // 计算垂直位置，确保不超出视口底部
+        let topPosition = y;
+        if (y + menuHeight > windowHeight) {
+            topPosition = windowHeight - menuHeight - 10; // 10px为安全底边距
+        }
+        contextMenu.style.top = `${topPosition}px`;
+        
+        // 为子菜单项添加智能定位逻辑
+        quickTagsItem.addEventListener('mouseenter', function() {
+            // 获取当前右键菜单的位置信息
+            const menuRect = contextMenu.getBoundingClientRect();
+            const submenuWidth = quickTagsSubmenu.offsetWidth;
+            
+            // 判断子菜单是否应该显示在左侧
+            if (showOnLeft || menuRect.right + submenuWidth > windowWidth) {
+                quickTagsSubmenu.classList.add('left-position');
+            } else {
+                quickTagsSubmenu.classList.remove('left-position');
+            }
+            
+            // 确保子菜单垂直方向不超出窗口
+            const submenuHeight = quickTagsSubmenu.offsetHeight;
+            const spaceBelow = windowHeight - menuRect.top;
+            
+            if (submenuHeight > spaceBelow) {
+                // 如果下方空间不足，向上偏移
+                quickTagsSubmenu.style.top = `${Math.max(0, spaceBelow - submenuHeight)}px`;
+            } else {
+                quickTagsSubmenu.style.top = '0';
+            }
+        });
+        
         contextMenu.style.display = 'block';
     }
     
@@ -529,7 +585,7 @@ async function playVideo(videoId) {
         // 注意: 实际的数据更新会在主进程中通过数据库完成
         // 这里只是更新UI显示
         video.viewCount = (video.viewCount || 0) + 1;
-        video.lastViewDate = new Date().toISOString().split('T')[0];
+        video.lastViewDate = new Date().toISOString();
         
         // 重新渲染视图
         renderTableView();
@@ -570,6 +626,11 @@ async function deleteVideo(videoId) {
     try {
         // 从数据库中删除
         await window.electronAPI.deleteVideo(videoId);
+        
+        // 删除对应的预览图
+        if (video.thumbnailUrl) {
+            await window.electronAPI.deleteThumbnail(video.thumbnailUrl);
+        }
         
         // 从本地数据中删除
         const index = videoData.findIndex(v => v.id === videoId);
@@ -695,58 +756,18 @@ async function addTagToVideo(videoId, tagToAdd) {
         
         // 更新本地数据
         videoData[videoIndex] = updatedVideo;
+
+        // 触发数据变化事件，通知其他模块数据已更新
+        document.dispatchEvent(new CustomEvent('videoDataChanged', {
+            detail: { video: updatedVideo, action: 'update' }
+        }));
+
+        // 直接使用导入的videoData.js模块中的函数，避免循环依赖问题
+        const { renderTableView, renderGridView } = await import('./videoData.js');
         
-        // // 导入标签数据同步函数和筛选气泡更新函数
-        // const { syncDataFromEnum, refreshFilterBubbles } = await import('./multiSelectData.js');
-        
-        // // 同步枚举数据，确保新标签同步到所有组件
-        // await syncDataFromEnum(true);
-        
-        // // 刷新筛选气泡，确保新标签出现在筛选选项中
-        // await refreshFilterBubbles(true);
-        
-        // // 导入videoData模块，以获取最新的刷新方法
-        // const videoDataModule = await import('./videoData.js');
-        
-        // // 重置可能影响视图的过滤和排序状态
-        // if (typeof videoDataModule.onVideoDataChanged === 'function') {
-        //     // 触发数据变更事件，确保视图完全刷新
-        //     videoDataModule.onVideoDataChanged();
-        // }
-        
-        // // 重新渲染视图
-        // renderCurrentView();
-        
-        // 立即更新DOM - 找到当前视频的标签单元格并更新内容
-        const tableRow = document.querySelector(`#video-table tbody tr[data-video-id="${videoId}"]`);
-        if (tableRow) {
-            console.log(`找到视频行，ID=${videoId}`);
-            const collectionCell = tableRow.querySelector('.column-collection');
-            if (collectionCell) {
-                console.log(`找到标签单元格，正在更新内容：${updatedVideo.collection}`);
-                collectionCell.textContent = updatedVideo.collection || '-';
-                collectionCell.title = updatedVideo.collection || '-';
-            } else {
-                console.warn(`未找到标签单元格，行ID=${videoId}`);
-            }
-        } else {
-            console.warn(`未找到视频行，ID=${videoId}，可能不在当前页面显示`);
-        }
-        
-        // 使用setTimeout延迟再次刷新，确保DOM已完全更新
-        // setTimeout(() => {
-        //     renderCurrentView();
-        //     // 再次尝试直接更新DOM元素
-        //     const tableRowAfterTimeout = document.querySelector(`#video-table tbody tr[data-video-id="${videoId}"]`);
-        //     if (tableRowAfterTimeout) {
-        //         const collectionCellAfterTimeout = tableRowAfterTimeout.querySelector('.column-collection');
-        //         if (collectionCellAfterTimeout) {
-        //             collectionCellAfterTimeout.textContent = updatedVideo.collection || '-';
-        //             collectionCellAfterTimeout.title = updatedVideo.collection || '-';
-        //             console.log(`延迟更新成功: 标签内容已更新为 ${updatedVideo.collection}`);
-        //         }
-        //     }
-        // }, 100);
+        // 手动调用两个渲染函数，确保两个视图都更新
+        renderTableView();
+        renderGridView();
         
         console.log(`已添加标签 "${tagToAdd}" 到视频: ${video.fileName}`);
     } catch (error) {

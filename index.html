@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/moveProgress.css">
     <link rel="stylesheet" href="css/settings.css">
+    <link rel="stylesheet" href="css/gridView.css">
     <style>
         body {
             background-color: #f5f7fa;
@@ -113,6 +114,7 @@
                             <th class="column-lastview" width="150px">最后观看时间</th>
                             <th class="column-notes" width="200px">备注</th>
                             <th class="column-filepath" width="250px">文件路径</th>
+                            <th class="column-duration" width="100px">时长</th>
                             <th class="column-filesize" width="100px">文件大小</th>
                             <th class="column-createdate" width="150px">文件创建时间</th>
                             <th class="column-importdate" width="150px">导入时间</th>
@@ -211,6 +213,9 @@
                                 
                                 <div class="info-label">文件大小</div>
                                 <div class="info-value" id="view-filesize">-</div>
+                                
+                                <div class="info-label">时长</div>
+                                <div class="info-value" id="view-duration">-</div>
                                 
                                 <div class="info-label">分辨率</div>
                                 <div class="info-value" id="view-resolution">-</div>
@@ -327,6 +332,9 @@
                                 
                                 <div class="info-label">文件大小</div>
                                 <div class="info-value" id="edit-view-filesize">-</div>
+                                
+                                <div class="info-label">时长</div>
+                                <div class="info-value" id="edit-view-duration">-</div>
                                 
                                 <div class="info-label">分辨率</div>
                                 <div class="info-value" id="edit-view-resolution">-</div>
@@ -475,6 +483,10 @@
                 <label for="col-filepath">文件路径</label>
             </div>
             <div class="column-item">
+                <input type="checkbox" id="col-duration" checked>
+                <label for="col-duration">时长</label>
+            </div>
+            <div class="column-item">
                 <input type="checkbox" id="col-filesize" checked>
                 <label for="col-filesize">文件大小</label>
             </div>
@@ -508,6 +520,7 @@
                 <option value="lastViewDate">最后观看时间</option>
                 <option value="notes">备注</option>
                 <option value="filePath">文件路径</option>
+                <option value="duration">时长</option>
                 <option value="fileSize">文件大小</option>
                 <option value="createdAt">文件创建时间</option>
                 <option value="importDate">导入时间</option>

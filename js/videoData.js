@@ -4,6 +4,9 @@
  * 集成数据库持久化功能
  */
 
+// 从areaC模块导入applyColumnSettings函数
+import { applyColumnSettings } from './areaC.js';
+
 // 统一的视频数据数组 - 从数据库加载
 let videoData = [];
 
@@ -197,6 +200,9 @@ function renderCurrentView() {
         renderGridView();
     } else {
         renderTableView();
+        
+        // 在表格渲染后确保列设置被正确应用
+        applyColumnSettings();
     }
 }
 
@@ -255,10 +261,71 @@ function renderTableView() {
         selectAllCheckbox.checked = allSelected;
     }
     
+    // 获取列可见性设置
+    let columnSettings = {};
+    // 尝试从localStorage直接获取列设置
+    const savedSettings = localStorage.getItem('columnSettings');
+    if (savedSettings) {
+        try {
+            columnSettings = JSON.parse(savedSettings);
+        } catch (e) {
+            console.error('解析表头设置失败:', e);
+        }
+    }
+    
+    // 格式化时间函数 - 精确到秒
+    function formatTimeWithSeconds(timeString) {
+        if (!timeString) return '-';
+        
+        try {
+            // 尝试解析时间字符串
+            const date = new Date(timeString);
+            
+            // 检查是否是有效日期
+            if (isNaN(date.getTime())) return timeString;
+            
+            // 格式化为 YYYY-MM-DD HH:MM:SS
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            const seconds = String(date.getSeconds()).padStart(2, '0');
+            
+            return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+        } catch (e) {
+            console.error('格式化时间失败:', e);
+            return timeString; // 出错时返回原始字符串
+        }
+    }
+    
+    // 格式化日期函数 - 仅日期
+    function formatDateOnly(dateString) {
+        if (!dateString) return '-';
+        
+        try {
+            // 尝试解析日期字符串
+            const date = new Date(dateString);
+            
+            // 检查是否是有效日期
+            if (isNaN(date.getTime())) return dateString;
+            
+            // 格式化为 YYYY-MM-DD
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            
+            return `${year}-${month}-${day}`;
+        } catch (e) {
+            console.error('格式化日期失败:', e);
+            return dateString; // 出错时返回原始字符串
+        }
+    }
+    
     currentPageData.forEach(video => {
         const row = document.createElement('tr');
         
-        // 复选框列
+        // 复选框列 - 始终显示
         const checkboxCell = document.createElement('td');
         checkboxCell.className = 'checkbox-cell sticky-left column-checkbox';
         
@@ -282,102 +349,116 @@ function renderTableView() {
         
         checkboxCell.appendChild(checkbox);
         row.appendChild(checkboxCell);
-        // 文件名列
-        const fileNameCell = document.createElement('td');
-        fileNameCell.className = 'column-filename';
-        fileNameCell.textContent = video.fileName;
-        fileNameCell.title = video.fileName; // 添加title属性显示完整内容
-        row.appendChild(fileNameCell);        
-        // 番号列
-        const codeCell = document.createElement('td');
-        codeCell.className = 'column-code';
-        codeCell.textContent = video.code || '-';
-        codeCell.title = video.code || '-';
-        row.appendChild(codeCell);
         
-        // 标签列
-        const collectionCell = document.createElement('td');
-        collectionCell.className = 'column-collection';
-        collectionCell.textContent = video.collection || '-';
-        collectionCell.title = video.collection || '-';
-        row.appendChild(collectionCell);
-    
-        // 演员列
-        const actorsCell = document.createElement('td');
-        actorsCell.className = 'column-actors';
-        actorsCell.textContent = video.actors || '-';
-        actorsCell.title = video.actors || '-';
-        row.appendChild(actorsCell);
+        // 定义列及其可见性状态
+        const columns = [
+            {
+                id: 'col-filename',
+                class: 'column-filename',
+                value: video.fileName,
+                title: video.fileName
+            },
+            {
+                id: 'col-code',
+                class: 'column-code',
+                value: video.code || '-',
+                title: video.code || '-'
+            },
+            {
+                id: 'col-collection',
+                class: 'column-collection',
+                value: video.collection || '-',
+                title: video.collection || '-'
+            },
+            {
+                id: 'col-actors',
+                class: 'column-actors',
+                value: video.actors || '-',
+                title: video.actors || '-'
+            },
+            {
+                id: 'col-resolution',
+                class: 'column-resolution',
+                value: video.resolution || '-',
+                title: video.resolution || '-'
+            },
+            {
+                id: 'col-rating',
+                class: 'column-rating',
+                value: video.rating ? video.rating.toFixed(1) : '-',
+                title: video.rating ? `评分: ${video.rating.toFixed(1)}` : '未评分'
+            },
+            {
+                id: 'col-viewcount',
+                class: 'column-viewcount',
+                value: video.viewCount || '0',
+                title: `观看次数: ${video.viewCount || '0'}`
+            },
+            {
+                id: 'col-lastview',
+                class: 'column-lastview',
+                value: formatTimeWithSeconds(video.lastViewDate),
+                title: video.lastViewDate ? video.lastViewDate : '未观看'
+            },
+            {
+                id: 'col-notes',
+                class: 'column-notes',
+                value: video.notes || '-',
+                title: video.notes || '-'
+            },
+            {
+                id: 'col-filepath',
+                class: 'column-filepath',
+                value: video.filePath || '-',
+                title: video.filePath || '-'
+            },
+            {
+                id: 'col-duration',
+                class: 'column-duration',
+                value: video.duration || '-',
+                title: video.duration || '-'
+            },
+            {
+                id: 'col-filesize',
+                class: 'column-filesize',
+                value: video.fileSize || '-',
+                title: video.fileSize || '-'
+            },
+            {
+                id: 'col-createdate',
+                class: 'column-createdate',
+                value: formatTimeWithSeconds(video.createDate),
+                title: video.createDate || '-'
+            },
+            {
+                id: 'col-importdate',
+                class: 'column-importdate',
+                value: formatTimeWithSeconds(video.importDate),
+                title: video.importDate || '-'
+            },
+            {
+                id: 'col-releasedate',
+                class: 'column-releasedate',
+                value: formatDateOnly(video.releaseDate),
+                title: video.releaseDate || '-'
+            }
+        ];
         
-        // 分辨率列
-        const resolutionCell = document.createElement('td');
-        resolutionCell.className = 'column-resolution';
-        resolutionCell.textContent = video.resolution || '-';
-        resolutionCell.title = video.resolution || '-';
-        row.appendChild(resolutionCell);
-        
-        // 评分列
-        const ratingCell = document.createElement('td');
-        ratingCell.className = 'column-rating';
-        ratingCell.textContent = video.rating ? video.rating.toFixed(1) : '-';
-        ratingCell.title = video.rating ? `评分: ${video.rating.toFixed(1)}` : '未评分';
-        row.appendChild(ratingCell);
-        
-        // 观看次数列
-        const viewCountCell = document.createElement('td');
-        viewCountCell.className = 'column-viewcount';
-        viewCountCell.textContent = video.viewCount || '0';
-        viewCountCell.title = `观看次数: ${video.viewCount || '0'}`;
-        row.appendChild(viewCountCell);
-        
-        // 最后观看时间列
-        const lastViewDateCell = document.createElement('td');
-        lastViewDateCell.className = 'column-lastview';
-        lastViewDateCell.textContent = video.lastViewDate || '-';
-        lastViewDateCell.title = video.lastViewDate || '未观看';
-        row.appendChild(lastViewDateCell);
-        
-        // 备注列
-        const notesCell = document.createElement('td');
-        notesCell.className = 'column-notes';
-        notesCell.textContent = video.notes || '-';
-        notesCell.title = video.notes || '-';
-        row.appendChild(notesCell);
-        
-        // 文件路径列
-        const filePathCell = document.createElement('td');
-        filePathCell.className = 'column-filepath';
-        filePathCell.textContent = video.filePath || '-';
-        filePathCell.title = video.filePath || '-';
-        row.appendChild(filePathCell);
-        
-        // 文件大小列
-        const fileSizeCell = document.createElement('td');
-        fileSizeCell.className = 'column-filesize';
-        fileSizeCell.textContent = video.fileSize || '-';
-        fileSizeCell.title = video.fileSize || '-';
-        row.appendChild(fileSizeCell);
-        
-        // 文件创建时间列
-        const createDateCell = document.createElement('td');
-        createDateCell.className = 'column-createdate';
-        createDateCell.textContent = video.createDate || '-';
-        createDateCell.title = video.createDate || '-';
-        row.appendChild(createDateCell);
-        
-        // 导入时间列
-        const importDateCell = document.createElement('td');
-        importDateCell.className = 'column-importdate';
-        importDateCell.textContent = video.importDate || '-';
-        importDateCell.title = video.importDate || '-';
-        row.appendChild(importDateCell);
-        
-        // 上映时间列
-        const releaseDateCell = document.createElement('td');
-        releaseDateCell.className = 'column-releasedate';
-        releaseDateCell.textContent = video.releaseDate || '-';
-        releaseDateCell.title = video.releaseDate || '-';
-        row.appendChild(releaseDateCell);
+        // 修改这部分：不再基于配置决定是否创建单元格，而是统一创建所有单元格并通过CSS控制显示/隐藏
+        columns.forEach(column => {
+            const cell = document.createElement('td');
+            cell.className = column.class;
+            cell.textContent = column.value;
+            cell.title = column.title;
+            
+            // 检查该列是否应该显示
+            const isVisible = column.id in columnSettings ? columnSettings[column.id] : true;
+            
+            // 设置单元格初始可见性
+            cell.style.display = isVisible ? '' : 'none';
+            
+            row.appendChild(cell);
+        });
         
         // 添加数据属性用于标识
         row.dataset.videoId = video.id;
@@ -419,15 +500,6 @@ function renderGridView() {
     // 优先使用排序后的数据，如果没有则使用筛选后的数据或原始数据
     const currentData = sortedData || filteredData || videoData;
     
-    // 如果没有视频数据，显示一个提示
-    // if (currentData.length === 0) {
-    //     const emptyMessage = document.createElement('div');
-    //     emptyMessage.className = 'w-full h-full flex items-center justify-center text-gray-500';
-    //     emptyMessage.textContent = '没有视频数据，请点击"导入视频"按钮添加视频';
-    //     grid.appendChild(emptyMessage);
-    //     return;
-    // }
-    
     // 计算当前页的数据 - 与表格视图使用相同的分页
     const startIndex = (paginationConfig.currentPage - 1) * paginationConfig.pageSize;
     const endIndex = Math.min(startIndex + paginationConfig.pageSize, currentData.length);
@@ -451,11 +523,19 @@ function renderGridView() {
         selectAllGrid.checked = allSelected;
     }
     
-    // 只渲染当前页的视频数据，而不是全部
+    // 标签最大显示数
+    const MAX_TAGS = 3;
+    
+    // 只渲染当前页的视频数据
     currentPageData.forEach(video => {
         const card = document.createElement('div');
         card.className = 'video-card';
         card.dataset.videoId = video.id;
+        card.dataset.videoPath = video.filePath;
+        
+        // 缩略图包装容器
+        const thumbWrap = document.createElement('div');
+        thumbWrap.className = 'thumb-wrap';
         
         // 复选框
         const checkbox = document.createElement('input');
@@ -463,12 +543,30 @@ function renderGridView() {
         checkbox.className = 'video-card-checkbox';
         checkbox.checked = video.selected;
         checkbox.dataset.id = video.id;
-        checkbox.addEventListener('change', function() {
+        checkbox.addEventListener('change', function(e) {
+            // 阻止事件冒泡，避免触发卡片点击
+            e.stopPropagation();
             video.selected = this.checked;
             updateSelectedCount();
             updateBatchActionsVisibility();
         });
-        card.appendChild(checkbox);
+        thumbWrap.appendChild(checkbox);
+        
+        // 分辨率标签
+        if (video.resolution) {
+            const resolution = document.createElement('span');
+            resolution.className = 'resolution';
+            resolution.textContent = video.resolution;
+            thumbWrap.appendChild(resolution);
+        }
+        
+        // 时长标签
+        if (video.duration) {
+            const duration = document.createElement('span');
+            duration.className = 'duration';
+            duration.textContent = video.duration;
+            thumbWrap.appendChild(duration);
+        }
         
         // 缩略图
         const thumbnail = document.createElement('div');
@@ -491,151 +589,104 @@ function renderGridView() {
         } else {
             thumbnail.style.backgroundImage = `url(https://via.placeholder.com/240x135?text=No+Preview)`;
         }
-        thumbnail.style.backgroundSize = 'cover';
-        thumbnail.style.backgroundPosition = 'center';
         
-        // 播放按钮覆盖层
-        const playOverlay = document.createElement('div');
-        playOverlay.className = 'absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 opacity-0 hover:opacity-100 transition-opacity';
+        thumbWrap.appendChild(thumbnail);
+        card.appendChild(thumbWrap);
         
-        const playBtn = document.createElement('button');
-        playBtn.className = 'bg-white rounded-full p-2 text-gray-800 hover:text-indigo-600';
-        playBtn.innerHTML = '<i class="fas fa-play"></i>';
-        playBtn.addEventListener('click', function(e) {
-            e.stopPropagation();
-            playVideo(video.filePath);
-        });
-        
-        playOverlay.appendChild(playBtn);
-        thumbnail.appendChild(playOverlay);
-        card.appendChild(thumbnail);
-        
-        // 视频信息
+        // 视频信息区域
         const info = document.createElement('div');
-        info.className = 'video-info p-2';
+        info.className = 'video-info';
         
-        // 文件名
+        // 标题 - 优先使用code(视频标题)，如果code为空则使用fileName(文件名)
         const title = document.createElement('div');
-        title.className = 'video-title text-sm font-medium mb-1 truncate';
-        title.title = video.fileName; // 添加悬停提示显示完整文件名
-        title.textContent = video.fileName;
+        title.className = 'video-title';
+        title.title = video.fileName; // 悬停提示显示完整文件名
+        // 显示视频标题，如果没有则显示文件名
+        title.textContent = video.code && video.code.trim() !== '' ? video.code : video.fileName;
         info.appendChild(title);
+        
+        // 标签区域
+        if (video.collection) {
+            const tagsContainer = document.createElement('div');
+            tagsContainer.className = 'video-tags';
+            
+            // 解析标签
+            const tagList = video.collection.split(',').filter(tag => tag.trim() !== '');
+            
+            // 显示前MAX_TAGS个标签
+            const visibleTags = tagList.slice(0, MAX_TAGS);
+            const remainingTags = tagList.slice(MAX_TAGS);
+            
+            // 添加可见标签
+            visibleTags.forEach(tag => {
+                const tagElement = document.createElement('span');
+                tagElement.className = 'video-tag';
+                tagElement.textContent = tag.trim();
+                tagsContainer.appendChild(tagElement);
+            });
+            
+            // 如果有更多标签，添加"..."及提示框
+            if (remainingTags.length > 0) {
+                const moreTag = document.createElement('span');
+                moreTag.className = 'tag-more';
+                moreTag.textContent = '...';
+                
+                const tooltip = document.createElement('span');
+                tooltip.className = 'tag-tooltip';
+                tooltip.textContent = remainingTags.join('、');
+                
+                moreTag.appendChild(tooltip);
+                tagsContainer.appendChild(moreTag);
+            }
+            
+            info.appendChild(tagsContainer);
+        }
         
         // 演员信息
         const actors = document.createElement('div');
-        actors.className = 'video-actors text-xs text-gray-600 mb-1 truncate';
-        actors.innerHTML = `<i class="fas fa-user mr-1"></i>${video.actors || '未知演员'}`;
+        actors.className = 'video-actors';
+        actors.textContent = video.actors ? video.actors : '未知演员';
         info.appendChild(actors);
         
-        // 底部信息栏（评分和其他元数据）
-        const bottomBar = document.createElement('div');
-        bottomBar.className = 'flex justify-between items-center';
+        // 底部信息栏（评分、分辨率等信息）
+        const bottomInfo = document.createElement('div');
+        bottomInfo.className = 'bottom-info';
         
-        // 评分 - 使用星星图标显示
-        const rating = document.createElement('div');
-        rating.className = 'star-rating';
+        // 星级评分
+        const starsContainer = document.createElement('div');
+        starsContainer.className = 'stars-row';
         
-        // 创建5颗星星
+        // 创建5颗星星 - 使用SVG实现
         for (let i = 1; i <= 5; i++) {
-            const star = document.createElement('i');
-            star.className = 'star fas fa-star';
+            const star = document.createElement('span');
+            star.className = 'star';
             
-            // 根据评分决定星星是否填充
-            if (video.rating) {
-                if (video.rating >= i) {
-                    star.classList.add('filled');
-                } else if (video.rating > i - 0.5) {
-                    star.classList.add('half-filled');
-                }
+            // 根据评分决定星星类型
+            let starClass = '';
+            if (video.rating && video.rating >= i) {
+                starClass = 'filled';
+            } else if (video.rating && video.rating > i - 0.5) {
+                starClass = 'half-filled';
             }
             
-            rating.appendChild(star);
+            // 创建SVG星星
+            star.innerHTML = `<svg viewBox="0 0 20 20"><polygon points="10,1 13,7 19,7.5 15,12 16,18 10,15 4,18 5,12 1,7.5 7,7"/></svg>`;
+            if (starClass) {
+                star.classList.add(starClass);
+            }
+            
+            starsContainer.appendChild(star);
         }
         
-        bottomBar.appendChild(rating);
-        
-        // 视频类型/分辨率
-        if (video.resolution) {
-            const resolution = document.createElement('span');
-            resolution.className = 'text-xs text-gray-500';
-            resolution.textContent = video.resolution;
-            bottomBar.appendChild(resolution);
-        }
-        
-        info.appendChild(bottomBar);
-        card.appendChild(info);
-        
-        // 操作按钮
-        const actions = document.createElement('div');
-        actions.className = 'video-actions absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity';
-        
-        const actionBtns = document.createElement('div');
-        
-        // 编辑按钮
-        const editBtn = document.createElement('button');
-        editBtn.className = 'action-btn';
-        editBtn.title = '编辑';
-        editBtn.innerHTML = '<i class="fas fa-edit"></i>';
-        editBtn.addEventListener('click', function(e) {
-            e.stopPropagation();
-            console.log('编辑视频:', video.id);
-        });
-        actionBtns.appendChild(editBtn);
-        
-        // 删除按钮
-        const deleteBtn = document.createElement('button');
-        deleteBtn.className = 'action-btn';
-        deleteBtn.title = '删除';
-        deleteBtn.innerHTML = '<i class="fas fa-trash-alt"></i>';
-        deleteBtn.addEventListener('click', async function(e) {
-            e.stopPropagation();
-            console.log('删除视频:', video.id);
-            
-            // 确认删除
-            const confirmMessage = `确定要移除视频 "${video.fileName}" 吗？\n\n注意：这只会从管理器中移除记录，不会删除实际的视频文件。`;
-            if (!confirm(confirmMessage)) {
-                return;
-            }
-            
-            try {
-                // 调用Electron API删除视频记录
-                const result = await window.electronAPI.deleteVideo(video.id);
-                if (result > 0) {
-                    // 从本地数据中移除
-                    const index = videoData.findIndex(v => v.id === video.id);
-                    if (index !== -1) {
-                        videoData.splice(index, 1);
-                    }
-                    
-                    // 更新UI
-                    renderCurrentView();
-                    updatePagination();
-                    
-                    // 更新总视频数量
-                    document.getElementById('total-count').textContent = videoData.length;
-                    
-                    console.log(`成功移除视频记录: ${video.fileName}`);
-                } else {
-                    console.warn(`未找到要删除的视频: ${video.id}`);
-                }
-            } catch (error) {
-                console.error('删除视频记录失败:', error);
-                alert('删除视频记录失败，请查看控制台了解详情');
-            }
-        });
-        actionBtns.appendChild(deleteBtn);
-        
-        actions.appendChild(actionBtns);
-        info.appendChild(actions);
+        bottomInfo.appendChild(starsContainer);
+        info.appendChild(bottomInfo);
         
         card.appendChild(info);
         
-        // 视频卡片点击事件添加选中效果
+        // 卡片点击事件 - 选中效果
         card.addEventListener('click', function(e) {
-            // 如果点击的是复选框或操作按钮，不处理
-            if (e.target.closest('.video-card-checkbox') || 
-                e.target.closest('.action-btn') || 
-                e.target.type === 'checkbox') {
+            // 如果点击的是复选框，不处理
+            if (e.target.closest('.video-card-checkbox') || e.target.type === 'checkbox') {
                 return;
             }
             
@@ -643,9 +694,18 @@ function renderGridView() {
             const allCards = grid.querySelectorAll('.video-card');
             allCards.forEach(c => c.classList.remove('selected'));
             this.classList.add('selected');
-            
-            // 不再触发打开详情的行为
         });
+        
+        // // 卡片双击事件 - 播放视频
+        // card.addEventListener('dblclick', function(e) {
+        //     // 如果点击的是复选框，不处理
+        //     if (e.target.closest('.video-card-checkbox') || e.target.type === 'checkbox') {
+        //         return;
+        //     }
+            
+        //     // 播放视频
+        //     playVideo(video.filePath);
+        // });
         
         grid.appendChild(card);
     });
@@ -829,6 +889,7 @@ function onVideoDataChanged() {
     // 应用排序
     sortAllData();
     
+    // 更新视图状态
     initViewState();
     
     // 更新总视频计数显示
@@ -836,7 +897,16 @@ function onVideoDataChanged() {
     if (totalCountElement) {
         totalCountElement.textContent = videoData.length;
     }
+    
+    // 确保两种视图都被重新渲染
+    renderCurrentView();
 }
+
+// 添加videoDataChanged事件监听器
+document.addEventListener('videoDataChanged', function(event) {
+    console.log('收到videoDataChanged事件:', event.detail);
+    onVideoDataChanged();
+});
 
 // 应用所有筛选条件生成最终筛选结果
 function applyFilters() {
@@ -1009,6 +1079,7 @@ function sortAllData() {
         case 'actors':
         case 'notes':
         case 'filePath':
+        case 'duration':
             // 文本字段排序
             dataToSortCopy.sort((a, b) => {
                 const valueA = (a[currentSortSettings.field] || '').toString().toLowerCase();

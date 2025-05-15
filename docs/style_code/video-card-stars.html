@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>视频卡片-星级评分与标签溢出</title>
+  <style>
+    body {
+      background: #f6f7fb;
+      padding: 40px;
+      display: flex;
+      gap: 40px;
+      font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+    }
+    .video-card {
+      width: 260px;
+      border-radius: 12px;
+      background: #fff;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.07);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      transition: box-shadow 0.2s;
+    }
+    .video-card:hover {
+      box-shadow: 0 8px 28px rgba(0,0,0,0.12);
+    }
+    .thumb-wrap {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16/9;
+      background: #ececec;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .checkbox {
+      position: absolute;
+      left: 10px;
+      top: 10px;
+      z-index: 2;
+    }
+    .resolution {
+      position: absolute;
+      right: 10px;
+      top: 10px;
+      background: rgba(255,255,255,0.85);
+      color: #1677ff;
+      font-size: 12px;
+      padding: 2px 10px;
+      border-radius: 8px;
+      font-weight: 500;
+      z-index: 2;
+      box-shadow: 0 1px 4px rgba(22,119,255,0.09);
+      max-width: 90px;
+      text-align: right;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .duration {
+      position: absolute;
+      right: 10px;
+      bottom: 10px;
+      background: rgba(0,0,0,0.75);
+      color: #fff;
+      padding: 2px 8px;
+      border-radius: 8px;
+      font-size: 12px;
+      letter-spacing: 1px;
+      z-index: 2;
+      white-space: nowrap;
+    }
+    .thumb {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      background: #ececec;
+      display: block;
+    }
+    .info {
+      padding: 16px 14px 10px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-height: 118px;
+      flex: 1;
+    }
+    .title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #222;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 2px;
+    }
+    .tags {
+      display: flex;
+      flex-wrap: nowrap;
+      align-items: center;
+      gap: 4px;
+      margin-bottom: 2px;
+      max-width: 100%;
+      overflow: hidden;
+      position: relative;
+    }
+    .tag {
+      background: #e6f4ff;
+      color: #1677ff;
+      border-radius: 6px;
+      padding: 2px 8px;
+      font-size: 12px;
+      margin-bottom: 2px;
+      white-space: nowrap;
+      max-width: 90px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .tag-more {
+      background: #f5f5f5;
+      color: #888;
+      border-radius: 6px;
+      padding: 2px 8px;
+      font-size: 12px;
+      cursor: pointer;
+      margin-left: 2px;
+      user-select: none;
+      position: relative;
+      white-space: nowrap;
+    }
+    .tag-tooltip {
+      display: none;
+      position: absolute;
+      left: 0; top: 26px;
+      background: #fff;
+      color: #222;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.09);
+      padding: 8px 10px;
+      font-size: 13px;
+      z-index: 10;
+      min-width: 120px;
+      max-width: 210px;
+      white-space: normal;
+    }
+    .tag-more:hover + .tag-tooltip,
+    .tag-tooltip:hover {
+      display: block;
+    }
+    .actors {
+      font-size: 13px;
+      color: #888;
+      margin-bottom: 2px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .stars-row {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      min-height: 30px;
+      margin-top: 8px;
+    }
+    .stars {
+      display: flex;
+      gap: 2px;
+      margin-right: 0;
+    }
+    .star {
+      width: 20px;
+      height: 20px;
+      display: inline-block;
+      vertical-align: middle;
+    }
+  </style>
+</head>
+<body>
+  <div class="video-card">
+    <div class="thumb-wrap">
+      <input type="checkbox" class="checkbox" title="选择"/>
+      <span class="resolution">1920×1080</span>
+      <span class="duration">02:31:45</span>
+      <div class="thumb"></div>
+    </div>
+    <div class="info">
+      <div class="title">流浪地球2：人类求生之路很长很长会被省略</div>
+      <div class="tags" id="tags-1">
+        <!-- JS填充标签 -->
+      </div>
+      <span class="actors">演员：吴京, 刘德华, 李雪健</span>
+      <div class="stars-row" id="stars-1">
+        <!-- JS填充星星 -->
+      </div>
+    </div>
+  </div>
+  <!-- 另一个无评分示例 -->
+  <div class="video-card">
+    <div class="thumb-wrap">
+      <input type="checkbox" class="checkbox" title="选择"/>
+      <span class="resolution">1280×720</span>
+      <span class="duration">01:11:22</span>
+      <div class="thumb"></div>
+    </div>
+    <div class="info">
+      <div class="title">疯狂动物城</div>
+      <div class="tags" id="tags-2"></div>
+      <span class="actors">演员：金妮弗·古德温, 杰森·贝特曼</span>
+      <div class="stars-row" id="stars-2"></div>
+    </div>
+  </div>
+  <script>
+    // 标签数据和评分数据
+    const cardData = [
+      {
+        tags: ["科幻", "动作", "爱情", "喜剧", "灾难"],
+        stars: 4,
+        tagsId: 'tags-1',
+        starsId: 'stars-1'
+      },
+      {
+        tags: ["动画", "冒险", "家庭", "动物", "成长"],
+        stars: 0,
+        tagsId: 'tags-2',
+        starsId: 'stars-2'
+      }
+    ];
+    // 标签最大显示数
+    const MAX_TAGS = 3;
+    cardData.forEach(card => {
+      const tagsDiv = document.getElementById(card.tagsId);
+      tagsDiv.innerHTML = '';
+      // 只显示前N个完整标签
+      const visibleTags = card.tags.slice(0, MAX_TAGS);
+      const remainingTags = card.tags.slice(MAX_TAGS);
+      visibleTags.forEach(tag => {
+        const span = document.createElement('span');
+        span.className = 'tag';
+        span.textContent = tag;
+        tagsDiv.appendChild(span);
+      });
+      if (remainingTags.length > 0) {
+        const more = document.createElement('span');
+        more.className = 'tag-more';
+        more.textContent = '...';
+        const tooltip = document.createElement('span');
+        tooltip.className = 'tag-tooltip';
+        tooltip.textContent = remainingTags.join('、');
+        more.appendChild(tooltip);
+        tagsDiv.appendChild(more);
+      }
+      // 星星渲染
+      const starsDiv = document.getElementById(card.starsId);
+      starsDiv.innerHTML = '';
+      const starsNum = Math.round(card.stars);
+      for (let i = 1; i <= 5; i++) {
+        const star = document.createElement('span');
+        star.className = 'star';
+        star.innerHTML = i <= starsNum && starsNum > 0
+          ? `<svg viewBox="0 0 20 20"><polygon fill="#faad14" points="10,1 13,7 19,7.5 15,12 16,18 10,15 4,18 5,12 1,7.5 7,7"/></svg>`
+          : `<svg viewBox="0 0 20 20"><polygon fill="#e0e0e0" points="10,1 13,7 19,7.5 15,12 16,18 10,15 4,18 5,12 1,7.5 7,7"/></svg>`;
+        starsDiv.appendChild(star);
+      }
+    });
+  </script>
+</body>
+</html>

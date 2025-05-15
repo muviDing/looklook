@@ -9,7 +9,7 @@ const DEFAULT_SETTINGS = {
     scanFolders: []
   },
   import: {
-    titleRegex: "([A-Za-z]{2,5})[\-_\. ]?(\d{2,6}[A-Za-z]?)"
+    titleRegex: "([A-Za-z]{2,5})[-_. ]?(\\d{2,6}[A-Za-z]?)"
   },
   quickTags: []
 };
@@ -18,10 +18,19 @@ const DEFAULT_SETTINGS = {
 let currentSettings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
 
 // 创建设置弹窗HTML
-function createSettingsModal() {
+async function createSettingsModal() {
   // 如果已经存在则不再创建
   if (document.getElementById('settings-modal')) {
     return;
+  }
+  
+  // 预先加载头像图片（从assets/avatar.mw文件中读取base64数据）
+  let avatarData = '';
+  try {
+    avatarData = await window.electronAPI.getBase64Image('assets/avatar.mw');
+    console.log('成功加载头像图片');
+  } catch (error) {
+    console.error('加载头像图片失败:', error);
   }
   
   // 创建设置弹窗容器
@@ -131,7 +140,7 @@ function createSettingsModal() {
             
             <div class="feedback-card">
               <div class="feedback-avatar">
-                <img src="" alt="用户头像">
+                <img src="${avatarData}" alt="用户头像">
               </div>
               <div class="feedback-info">
                 <h4 class="feedback-name">牧威</h4>
@@ -953,9 +962,9 @@ function getSectionName(sectionId) {
 }
 
 // 显示设置弹窗
-function showSettingsModal() {
+async function showSettingsModal() {
   // 确保弹窗已创建
-  createSettingsModal();
+  await createSettingsModal();
   
   // 重新加载设置，确保显示最新保存的值
   loadSettings();

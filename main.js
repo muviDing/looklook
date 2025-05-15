@@ -24,7 +24,7 @@ let ipcHandlersRegistered = false;
 
 // 创建窗口
 function createWindow() {
-  // 创建浏览器窗口
+  // 创建浏览器窗口 
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
@@ -60,6 +60,22 @@ function formatFileSize(bytes) {
   const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+// 格式化时长的辅助函数
+function formatDuration(seconds) {
+  if (!seconds || seconds <= 0) return '';
+  
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const remainingSeconds = Math.floor(seconds % 60);
+  
+  // 格式化为 HH:MM:SS，如果小时为0则显示为 MM:SS
+  if (hours > 0) {
+    return `${hours}:${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+  } else {
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+  }
 }
 
 // 添加获取设置的函数
@@ -109,6 +125,40 @@ function getVideoResolution(videoPath) {
           }
         } catch (error) {
           console.error('解析视频分辨率失败:', error.message);
+          resolve('');
+        }
+      });
+    } catch (error) {
+      console.error('调用ffprobe失败:', error.message);
+      resolve('');
+    }
+  });
+}
+
+// 获取视频时长的函数
+function getVideoDuration(videoPath) {
+  return new Promise((resolve, reject) => {
+    try {
+      ffmpeg.ffprobe(videoPath, (err, metadata) => {
+        if (err) {
+          console.error('获取视频元数据失败:', err.message);
+          resolve(''); // 获取失败返回空字符串，但不影响导入流程
+          return;
+        }
+        
+        try {
+          // 从格式信息中获取时长（秒）
+          if (metadata.format && metadata.format.duration) {
+            const duration = metadata.format.duration;
+            const formattedDuration = formatDuration(duration);
+            console.log(`视频时长: ${formattedDuration} (${duration}秒)`);
+            resolve(formattedDuration);
+          } else {
+            console.log('无法获取视频时长');
+            resolve('');
+          }
+        } catch (error) {
+          console.error('解析视频时长失败:', error.message);
           resolve('');
         }
       });
@@ -185,6 +235,32 @@ function registerIpcHandlers() {
 
   ipcMain.on('window-close', () => {
     if (mainWindow) mainWindow.close();
+  });
+
+  // 读取base64编码的图片文件
+  ipcMain.handle('get-base64-image', async (event, filePath) => {
+    console.log(`读取base64图片文件: ${filePath}`);
+    
+    try {
+      // 检查文件路径是相对路径还是绝对路径
+      const absolutePath = path.isAbsolute(filePath) ? 
+        filePath : path.join(__dirname, filePath);
+      
+      // 检查文件是否存在
+      if (!fs.existsSync(absolutePath)) {
+        console.error(`文件不存在: ${absolutePath}`);
+        return '';
+      }
+      
+      // 读取文件内容
+      const data = fs.readFileSync(absolutePath, 'utf8');
+      console.log(`成功读取图片文件: ${filePath}`);
+      
+      return data;
+    } catch (error) {
+      console.error('读取base64图片文件失败:', error);
+      return '';
+    }
   });
 
   // 视频管理
@@ -490,6 +566,9 @@ function registerIpcHandlers() {
               // 获取视频分辨率
               const resolution = await getVideoResolution(filePath);
               
+              // 获取视频时长
+              const duration = await getVideoDuration(filePath);
+              
               // 根据设置解析标题
               let code = '';
               if (settings && settings.import && settings.import.titleRegex) {
@@ -515,7 +594,7 @@ function registerIpcHandlers() {
                 fileName: fileName,
                 filePath: filePath,
                 fileSize: formatFileSize(stats.size),
-                createDate: new Date(stats.birthtime).toISOString().split('T')[0],
+                createDate: new Date(stats.birthtime).toISOString(),
                 importDate: importDate,
                 viewCount: 0,
                 lastViewDate: '',
@@ -526,6 +605,7 @@ function registerIpcHandlers() {
                 code: code,
                 collection: '',
                 resolution: resolution,
+                duration: duration,
                 notes: '',
                 releaseDate: ''
               };
@@ -546,6 +626,9 @@ function registerIpcHandlers() {
               
               // 获取视频分辨率 - 即使缩略图失败也尝试获取
               const resolution = await getVideoResolution(filePath);
+              
+              // 获取视频时长 - 即使缩略图失败也尝试获取
+              const duration = await getVideoDuration(filePath);
               
               // 根据设置解析标题
               let code = '';
@@ -569,7 +652,7 @@ function registerIpcHandlers() {
                 fileName: fileName,
                 filePath: filePath,
                 fileSize: formatFileSize(stats.size),
-                createDate: new Date(stats.birthtime).toISOString().split('T')[0],
+                createDate: new Date(stats.birthtime).toISOString(),
                 importDate: importDate,
                 viewCount: 0,
                 lastViewDate: '',
@@ -580,6 +663,7 @@ function registerIpcHandlers() {
                 code: code,
                 collection: '',
                 resolution: resolution,
+                duration: duration,
                 notes: '',
                 releaseDate: ''
               };
@@ -876,6 +960,9 @@ function registerIpcHandlers() {
             // 获取视频分辨率
             const resolution = await getVideoResolution(filePath);
             
+            // 获取视频时长
+            const duration = await getVideoDuration(filePath);
+            
             // 根据设置解析标题
             let code = '';
             if (settings && settings.import && settings.import.titleRegex) {
@@ -901,7 +988,7 @@ function registerIpcHandlers() {
               fileName: fileName,
               filePath: filePath,
               fileSize: formatFileSize(stats.size),
-              createDate: new Date(stats.birthtime).toISOString().split('T')[0],
+              createDate: new Date(stats.birthtime).toISOString(),
               importDate: importDate,
               viewCount: 0,
               lastViewDate: '',
@@ -912,6 +999,7 @@ function registerIpcHandlers() {
               code: code,
               collection: '',
               resolution: resolution,
+              duration: duration,
               notes: '',
               releaseDate: ''
             };
@@ -933,17 +1021,13 @@ function registerIpcHandlers() {
             // 获取视频分辨率 - 即使缩略图失败也尝试获取
             const resolution = await getVideoResolution(filePath);
             
+            // 获取视频时长 - 即使缩略图失败也尝试获取
+            const duration = await getVideoDuration(filePath);
+            
             // 根据设置解析标题
             let code = '';
             if (settings && settings.import && settings.import.titleRegex) {
               try {
-                // const regex = new RegExp(settings.import.titleRegex);
-                // const match = fileName.match(regex);
-                // if (match && match[1]) {
-                //   code = match[1].trim();
-                // } else if (match && match[0]) {
-                //   code = match[0].trim();
-                // }
                 const regexObj = new RegExp(settings.import.titleRegex);
                 const match = fileName.match(regexObj);
                 
@@ -962,7 +1046,7 @@ function registerIpcHandlers() {
               fileName: fileName,
               filePath: filePath,
               fileSize: formatFileSize(stats.size),
-              createDate: new Date(stats.birthtime).toISOString().split('T')[0],
+              createDate: new Date(stats.birthtime).toISOString(),
               importDate: importDate,
               viewCount: 0,
               lastViewDate: '',
@@ -973,6 +1057,7 @@ function registerIpcHandlers() {
               code: code,
               collection: '',
               resolution: resolution,
+              duration: duration,
               notes: '',
               releaseDate: ''
             };
@@ -1195,6 +1280,36 @@ function registerIpcHandlers() {
     } catch (error) {
       console.error('复制图片失败:', error);
       throw error;
+    }
+  });
+
+  // 删除缩略图文件
+  ipcMain.handle('deleteThumbnail', async (event, thumbnailPath) => {
+    console.log(`删除缩略图: ${thumbnailPath}`);
+    
+    // 如果路径为空或不是thumbnails目录下的文件，则跳过
+    if (!thumbnailPath || !thumbnailPath.includes('thumbnails/')) {
+      console.log('无效的缩略图路径，跳过删除');
+      return false;
+    }
+    
+    try {
+      // 转换为绝对路径
+      const absolutePath = path.join(__dirname, thumbnailPath);
+      
+      // 检查文件是否存在
+      if (fs.existsSync(absolutePath)) {
+        fs.unlinkSync(absolutePath);
+        console.log(`缩略图已成功删除: ${absolutePath}`);
+        return true;
+      } else {
+        console.log(`缩略图文件不存在: ${absolutePath}`);
+        return false;
+      }
+    } catch (error) {
+      console.error('删除缩略图失败:', error);
+      // 出错时只记录日志不抛出异常，避免影响主流程
+      return false;
     }
   });
 

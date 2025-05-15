@@ -19,6 +19,8 @@ let originalThumbnailUrl = '';
 let currentThumbnailUrl = '';
 // 编辑模式下的临时预览图URL，用于编辑过程中
 let editingThumbnailUrl = '';
+// 保存编辑过程中上传的所有预览图URL
+let uploadedThumbnailUrls = [];
 // 当前视图模式: 'view' 或 'edit'
 let currentViewMode = 'view';
 // 多选下拉组件实例
@@ -70,13 +72,8 @@ async function initDetailDrawer() {
     // 查看视图的编辑按钮事件
     viewEditBtn.addEventListener('click', () => switchViewMode('edit'));
     
-    // 编辑视图的取消按钮事件
-    cancelEditBtn.addEventListener('click', () => {
-        // 恢复预览图到原始状态
-        restoreOriginalImage();
-        // 切换回查看模式
-        switchViewMode('view');
-    });
+    // 初始化编辑视图的取消按钮事件
+    setupCancelEditButton();
     
     // 编辑视图的保存按钮事件
     saveBtn.addEventListener('click', saveVideoDetails);
@@ -125,10 +122,10 @@ async function initDetailDrawer() {
                         });
                     } else {
                         // 解析失败，提示用户
-                        console.log('无法使用当前正则表达式解析标题');
+                        console.log('无法使用当前正则表达式解析该标题');
                         import('./areaC.js').then(module => {
                             if (typeof module.showCustomAlert === 'function') {
-                                module.showCustomAlert('无法使用当前正则表达式解析标题，请检查标题规则设置', 'warning');
+                                module.showCustomAlert('无法使用当前正则表达式解析该标题，请检查标题规则设置', 'warning');
                             }
                         });
                     }
@@ -235,6 +232,9 @@ function switchViewMode(mode) {
         // 保存当前预览图URL作为编辑开始时的状态
         editingThumbnailUrl = currentThumbnailUrl;
         
+        // 清空上传的预览图URL数组
+        uploadedThumbnailUrls = [];
+        
         // 添加编辑模式的类名到背景遮罩
         backdrop.classList.add('editing');
         
@@ -287,6 +287,9 @@ function openDetailDrawer(videoId) {
     originalThumbnailUrl = video.thumbnailUrl || '';
     currentThumbnailUrl = originalThumbnailUrl;
     editingThumbnailUrl = originalThumbnailUrl;
+    
+    // 重置上传的预览图数组
+    uploadedThumbnailUrls = [];
     
     // 设置预览图（查看模式）
     const previewImgUrl = currentThumbnailUrl ? 
@@ -356,6 +359,7 @@ function updateViewModeContent(video) {
     setTextContent('view-filename', video.fileName);
     setTextContent('view-filepath', video.filePath);
     setTextContent('view-filesize', video.fileSize);
+    setTextContent('view-duration', video.duration);
     setTextContent('view-resolution', video.resolution);
     
     // 格式化时间 - 精确到秒
@@ -375,6 +379,7 @@ function updateViewModeContent(video) {
     setTextContent('edit-view-filename', video.fileName);
     setTextContent('edit-view-filepath', video.filePath);
     setTextContent('edit-view-filesize', video.fileSize);
+    setTextContent('edit-view-duration', video.duration);
     setTextContent('edit-view-resolution', video.resolution);
     setTextContent('edit-view-createdate', createDate);
     setTextContent('edit-view-importdate', importDate);
@@ -486,12 +491,16 @@ function closeDetailDrawer() {
     backdrop.classList.remove('visible');
     backdrop.classList.remove('editing');
     
+    // 删除所有未使用的上传预览图
+    cleanupUnusedThumbnails();
+    
     // 清空当前视频ID、评分和预览图
     currentVideoId = null;
     currentRating = 0;
     originalThumbnailUrl = '';
     currentThumbnailUrl = '';
     editingThumbnailUrl = '';
+    uploadedThumbnailUrls = [];
     
     // 重置抽屉内容
     document.getElementById('detail-preview').style.backgroundImage = '';
@@ -509,10 +518,33 @@ function closeDetailDrawer() {
 }
 
 /**
+ * 清理未使用的预览图
+ */
+async function cleanupUnusedThumbnails() {
+    try {
+        // 如果有上传的预览图但未被保存使用，删除它们
+        for (const thumbnailUrl of uploadedThumbnailUrls) {
+            // 如果不是当前使用的预览图，则删除
+            if (thumbnailUrl !== currentThumbnailUrl) {
+                console.log(`删除未使用的预览图: ${thumbnailUrl}`);
+                await window.electronAPI.deleteThumbnail(thumbnailUrl);
+            }
+        }
+        // 清空上传列表
+        uploadedThumbnailUrls = [];
+    } catch (error) {
+        console.error('清理未使用预览图失败:', error);
+    }
+}
+
+/**
  * 更换预览图
  */
 async function changePreviewImage() {
     try {
+        // 保存旧的预览图URL，方便在取消编辑时恢复
+        const oldThumbnailUrl = editingThumbnailUrl;
+        
         // 调用主进程的文件选择对话框
         const result = await window.electronAPI.selectFile({
             title: '选择新的预览图',
@@ -538,11 +570,17 @@ async function changePreviewImage() {
                 const thumbnailPath = await window.electronAPI.copyImageToThumbnails(filePath, newFileName);
                 console.log('复制后的缩略图路径:', thumbnailPath);
                 
+                // 添加到上传预览图列表
+                uploadedThumbnailUrls.push(thumbnailPath);
+                
                 // 更新当前编辑中的预览图URL (使用相对路径)
                 editingThumbnailUrl = thumbnailPath;
                 
                 // 设置编辑模式下的预览图
                 document.getElementById('detail-preview-edit').style.backgroundImage = `url("${thumbnailPath}")`;
+                
+                // 重新设置取消编辑按钮事件
+                setupCancelEditButton();
             } catch (copyError) {
                 console.error('复制图片失败:', copyError);
                 alert('无法复制选中的图片，请重试或选择其他图片');
@@ -552,6 +590,30 @@ async function changePreviewImage() {
         console.error('选择预览图失败:', error);
         alert('选择预览图失败: ' + error.message);
     }
+}
+
+/**
+ * 设置取消编辑按钮的事件处理
+ */
+function setupCancelEditButton() {
+    const cancelBtn = document.getElementById('cancel-edit-btn');
+    if (!cancelBtn) return;
+    
+    // 移除之前的事件监听器，避免重复添加
+    const newCancelBtn = cancelBtn.cloneNode(true);
+    cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+    
+    // 添加新的事件监听器
+    newCancelBtn.addEventListener('click', () => {
+        // 清理所有上传但未使用的预览图
+        cleanupUnusedThumbnails();
+        
+        // 恢复预览图到原始状态
+        restoreOriginalImage();
+        
+        // 切换回查看模式
+        switchViewMode('view');
+    });
 }
 
 /**
@@ -733,6 +795,9 @@ async function saveVideoDetails() {
         return;
     }
     
+    // 保存原视频的预览图路径
+    const oldThumbnailUrl = videoData[videoIndex].thumbnailUrl;
+    
     // 更新视频数据
     const updatedVideo = {
         ...videoData[videoIndex],
@@ -754,6 +819,23 @@ async function saveVideoDetails() {
         
         // 调用API更新数据库
         await window.electronAPI.updateVideo(updatedVideo);
+        
+        // 如果预览图已更新，删除旧预览图
+        if (oldThumbnailUrl && oldThumbnailUrl !== thumbnailUrl && oldThumbnailUrl.includes('thumbnails/')) {
+            await window.electronAPI.deleteThumbnail(oldThumbnailUrl);
+            console.log(`旧预览图已删除: ${oldThumbnailUrl}`);
+        }
+        
+        // 删除所有已上传但未使用的预览图
+        for (const uploadedUrl of uploadedThumbnailUrls) {
+            if (uploadedUrl !== thumbnailUrl) {
+                await window.electronAPI.deleteThumbnail(uploadedUrl);
+                console.log(`未使用的预览图已删除: ${uploadedUrl}`);
+            }
+        }
+        
+        // 清空上传列表
+        uploadedThumbnailUrls = [];
         
         // 更新本地数据
         videoData[videoIndex] = updatedVideo;

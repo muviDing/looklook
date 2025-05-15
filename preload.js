@@ -30,6 +30,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // 文件操作
   selectFile: (options) => ipcRenderer.invoke('selectFile', options),
   copyImageToThumbnails: (sourcePath, newFileName) => ipcRenderer.invoke('copyImageToThumbnails', sourcePath, newFileName),
+  getBase64Image: (filePath) => ipcRenderer.invoke('get-base64-image', filePath),
   
   // 打开外部链接
   openExternal: (url) => ipcRenderer.invoke('open-external', url),
@@ -64,4 +65,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // 设置管理
   saveSettings: (settings) => ipcRenderer.invoke('save-settings', settings),
   getSettings: () => ipcRenderer.invoke('get-settings'),
+  
+  // 删除缩略图
+  deleteThumbnail: (thumbnailPath) => ipcRenderer.invoke('deleteThumbnail', thumbnailPath),
 });
