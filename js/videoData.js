@@ -583,6 +583,7 @@ function renderGridView() {
             };
             img.onerror = () => {
                 // 图片加载失败，使用默认图片
+                console.log('缩略图加载失败:', video.thumbnailUrl);
                 thumbnail.style.backgroundImage = `url(https://via.placeholder.com/240x135?text=No+Preview)`;
             };
             img.src = video.thumbnailUrl;
@@ -834,21 +835,59 @@ async function playVideo(filePath) {
     if (!filePath) return;
     
     try {
-        // 使用Electron API打开视频文件
-        await window.electronAPI.openVideo(filePath);
-        
-        // 更新UI中的观看次数和最后观看时间
+        // 获取对应的视频对象
         const videoIndex = videoData.findIndex(video => video.filePath === filePath);
-        if (videoIndex !== -1) {
-            videoData[videoIndex].viewCount += 1;
-            videoData[videoIndex].lastViewDate = new Date().toISOString().split('T')[0];
+        if (videoIndex === -1) {
+            console.error('视频数据不存在:', filePath);
+            return;
+        }
+        
+        const video = videoData[videoIndex];
+        
+        // 先进行文件存在性检查
+        const { checkVideoFileExists } = await import('./utils.js');
+        const { exists, tagUpdated } = await checkVideoFileExists(video);
+        
+        if (!exists) {
+            // 文件不存在，使用自定义提示
+            const { showCustomAlert } = await import('./areaC.js');
+            showCustomAlert(`无法播放视频"${video.fileName}"，文件不存在或已被移动。`, 'error');
             
-            // 重新渲染视图以反映更新
+            // 如果标签已更新，触发数据变化事件
+            if (tagUpdated) {
+                document.dispatchEvent(new CustomEvent('videoDataChanged', {
+                    detail: { video, action: 'update' }
+                }));
+            }
+            return;
+        }
+        
+        // 文件存在，播放视频
+        const result = await window.electronAPI.openVideo(filePath);
+        
+        if (!result.success) {
+            // 播放失败
+            const { showCustomAlert } = await import('./areaC.js');
+            showCustomAlert(`播放视频"${video.fileName}"失败。`, 'error');
+            return;
+        }
+        
+        // 更新本地数据
+        videoData[videoIndex].viewCount += 1;
+        videoData[videoIndex].lastViewDate = new Date().toISOString().split('T')[0];
+        
+        // 如果标签被更新，或者视频被成功播放，重新渲染视图
+        if (tagUpdated || result.success) {
             renderTableView();
             renderGridView();
         }
     } catch (error) {
         console.error('播放视频失败:', error);
+        import('./areaC.js').then(module => {
+            if (typeof module.showCustomAlert === 'function') {
+                module.showCustomAlert('播放视频时发生错误，请查看控制台了解详情。', 'error');
+            }
+        });
     }
 }
 
@@ -1181,4 +1220,17 @@ function updateSortSettings(field, direction) {
     
     // 执行排序
     sortAllData();
+}
+
+/**
+ * 辅助函数：检查是否是有效的缩略图URL
+ * @param {string} url - 缩略图URL
+ * @returns {boolean} 是否是有效的缩略图URL
+ */
+function isValidThumbnailUrl(url) {
+    // 检查是否为空
+    if (!url) return false;
+    
+    // 检查是否是缩略图URL (支持旧格式和新格式)
+    return url.includes('thumbnails/') || url.startsWith('app://thumbnail/');
 }

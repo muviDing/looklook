@@ -14,6 +14,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getVideos: () => ipcRenderer.invoke('get-videos'),
   openVideo: (filePath) => ipcRenderer.invoke('open-video', filePath),
   openSourceFolder: (filePath) => ipcRenderer.invoke('open-source-folder', filePath),
+  checkFileExists: (filePath) => ipcRenderer.invoke('checkFileExists', filePath),
   
   // 导入进度相关
   cancelImport: () => ipcRenderer.send('cancel-import'),
@@ -68,4 +69,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   // 删除缩略图
   deleteThumbnail: (thumbnailPath) => ipcRenderer.invoke('deleteThumbnail', thumbnailPath),
+  
+  // 测试功能
+  testFFmpeg: (args) => ipcRenderer.invoke('test-ffmpeg', args),
 });

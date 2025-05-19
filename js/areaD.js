@@ -578,8 +578,33 @@ async function playVideo(videoId) {
     }
     
     try {
-        // 使用Electron API打开视频播放器
-        await window.electronAPI.openVideo(video.filePath);
+        // 先进行文件存在性检查
+        const { checkVideoFileExists } = await import('./utils.js');
+        const { exists, tagUpdated } = await checkVideoFileExists(video);
+        
+        if (!exists) {
+            // 文件不存在，使用自定义提示
+            const { showCustomAlert } = await import('./areaC.js');
+            showCustomAlert(`无法播放视频"${video.fileName}"，文件不存在或已被移动。`, 'error');
+            
+            // 如果标签已更新，触发数据变化事件
+            if (tagUpdated) {
+                document.dispatchEvent(new CustomEvent('videoDataChanged', {
+                    detail: { video, action: 'update' }
+                }));
+            }
+            return;
+        }
+        
+        // 文件存在，播放视频
+        const result = await window.electronAPI.openVideo(video.filePath);
+        
+        if (!result.success) {
+            // 播放失败
+            const { showCustomAlert } = await import('./areaC.js');
+            showCustomAlert(`播放视频"${video.fileName}"失败。`, 'error');
+            return;
+        }
         
         // 更新本地数据的观看次数和最后观看时间
         // 注意: 实际的数据更新会在主进程中通过数据库完成
@@ -587,11 +612,19 @@ async function playVideo(videoId) {
         video.viewCount = (video.viewCount || 0) + 1;
         video.lastViewDate = new Date().toISOString();
         
-        // 重新渲染视图
-        renderTableView();
-        renderGridView();
+        // 如果标签被更新，或者视频被成功播放，重新渲染视图
+        if (tagUpdated || result.success) {
+            const { renderTableView, renderGridView } = await import('./videoData.js');
+            renderTableView();
+            renderGridView();
+        }
     } catch (error) {
         console.error('播放视频失败:', error);
+        import('./areaC.js').then(module => {
+            if (typeof module.showCustomAlert === 'function') {
+                module.showCustomAlert('播放视频时发生错误，请查看控制台了解详情。', 'error');
+            }
+        });
     }
 }
 
@@ -601,16 +634,17 @@ async function editVideo(videoId) {
     const video = videoData.find(v => v.id === videoId);
     if (!video) return;
     
-    // 导入areaF.js中的openDetailDrawer函数并调用
-    import('./areaF.js').then(module => {
+    try {
+        // 导入areaF.js中的openDetailDrawer函数并调用
+        const module = await import('./areaF.js');
         if (typeof module.openDetailDrawer === 'function') {
-            module.openDetailDrawer(videoId);
+            await module.openDetailDrawer(videoId);
         } else {
             console.error('无法打开详情抽屉: openDetailDrawer函数不存在');
         }
-    }).catch(error => {
-        console.error('导入areaF.js失败:', error);
-    });
+    } catch (error) {
+        console.error('导入areaF.js或打开详情抽屉失败:', error);
+    }
 }
 
 // 删除视频
@@ -627,8 +661,8 @@ async function deleteVideo(videoId) {
         // 从数据库中删除
         await window.electronAPI.deleteVideo(videoId);
         
-        // 删除对应的预览图
-        if (video.thumbnailUrl) {
+        // 删除对应的缩略图
+        if (video.thumbnailUrl && isValidThumbnailUrl(video.thumbnailUrl)) {
             await window.electronAPI.deleteThumbnail(video.thumbnailUrl);
         }
         
@@ -780,6 +814,19 @@ async function addTagToVideo(videoId, tagToAdd) {
             }
         });
     }
+}
+
+/**
+ * 辅助函数：检查是否是有效的缩略图URL
+ * @param {string} url - 缩略图URL
+ * @returns {boolean} 是否是有效的缩略图URL
+ */
+function isValidThumbnailUrl(url) {
+    // 检查是否为空
+    if (!url) return false;
+    
+    // 检查是否是缩略图URL (支持旧格式和新格式)
+    return url.includes('thumbnails/') || url.startsWith('app://thumbnail/');
 }
 
 // 导出函数供主模块使用

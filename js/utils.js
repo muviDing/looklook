@@ -246,8 +246,45 @@ function parseTitleFromFilename(filename, regex) {
   }
 }
 
+/**
+ * 检查视频文件是否存在并管理路径异常标签
+ * @param {Object} video 视频对象
+ * @returns {Promise<Object>} 包含exists和tagUpdated属性的对象
+ */
+async function checkVideoFileExists(video) {
+  try {
+    // 检查文件是否存在
+    const exists = await window.electronAPI.checkFileExists(video.filePath);
+    
+    // 获取当前视频的标签
+    const tags = video.collection ? video.collection.split(',').map(tag => tag.trim()).filter(Boolean) : [];
+    const hasPathErrorTag = tags.includes('路径异常');
+    
+    // 根据文件是否存在和是否有标签，决定添加或移除标签
+    if (!exists && !hasPathErrorTag) {
+      // 文件不存在且没有标签，添加标签
+      tags.push('路径异常');
+      video.collection = tags.join(',');
+      await window.electronAPI.updateVideo(video);
+      return { exists: false, tagUpdated: true };
+    } else if (exists && hasPathErrorTag) {
+      // 文件存在但有标签，移除标签
+      const newTags = tags.filter(tag => tag !== '路径异常');
+      video.collection = newTags.join(',');
+      await window.electronAPI.updateVideo(video);
+      return { exists: true, tagUpdated: true };
+    }
+    
+    return { exists, tagUpdated: false };
+  } catch (error) {
+    console.error('检查视频文件存在性失败:', error);
+    return { exists: false, error };
+  }
+}
+
 // 导出函数
 export { 
   showCustomConfirm,
-  parseTitleFromFilename
+  parseTitleFromFilename,
+  checkVideoFileExists
 }; 

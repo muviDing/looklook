@@ -6,17 +6,41 @@
 const path = require('path');
 const fs = require('fs');
 const Datastore = require('nedb');
+const { app } = require('electron');
+
+// 获取应用数据目录
+function getUserDataPath(...args) {
+  // 在开发环境中使用app.getAppPath()，在生产环境中使用app.getPath('exe')
+  let basePath;
+  
+  if (app.isPackaged) {
+    // 生产环境：使用可执行文件所在目录
+    basePath = path.dirname(process.execPath);
+  } else {
+    // 开发环境：使用当前目录
+    basePath = app.getAppPath();
+  }
+  
+  // 在基础路径下创建userdata目录
+  const userDataDir = path.join(basePath, 'userdata');
+  return path.join(userDataDir, ...args);
+}
+
+// 确保目录存在
+function ensureDirectoryExists(dirPath) {
+  if (!fs.existsSync(dirPath)) {
+    fs.mkdirSync(dirPath, { recursive: true });
+  }
+}
 
 // 数据库文件路径
-const dbPath = path.join(process.env.APPDATA || process.env.HOME, 'zaigaikankanle', 'videos.db');
+const dbPath = getUserDataPath('videos.db');
 // 枚举值数据库文件路径
-const enumDbPath = path.join(process.env.APPDATA || process.env.HOME, 'zaigaikankanle', 'enums.db');
+const enumDbPath = getUserDataPath('enums.db');
 
 // 确保数据库目录存在
 const dbDir = path.dirname(dbPath);
-if (!fs.existsSync(dbDir)) {
-    fs.mkdirSync(dbDir, { recursive: true });
-}
+ensureDirectoryExists(dbDir);
 
 // 初始化数据库
 const db = new Datastore({ 
@@ -161,6 +185,13 @@ async function initEnumCache() {
         for (const type of enumTypes) {
             const values = await getEnumValues(type);
             console.log(`已加载枚举值[${type}]: ${values.length}个`);
+        }
+        
+        // 确保合集中包含"路径异常"标签
+        const collections = await getEnumValues('collection');
+        if (!collections.includes('路径异常')) {
+            console.log('添加默认标签: 路径异常');
+            await addEnumValue('collection', '路径异常');
         }
     } catch (error) {
         console.error('初始化枚举值缓存失败:', error);

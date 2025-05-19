@@ -21,6 +21,19 @@ function invertSelection() {
     window.invertSelection();
 }
 
+/**
+ * 辅助函数：检查是否是有效的缩略图URL
+ * @param {string} url - 缩略图URL
+ * @returns {boolean} 是否是有效的缩略图URL
+ */
+function isValidThumbnailUrl(url) {
+    // 检查是否为空
+    if (!url) return false;
+    
+    // 检查是否是缩略图URL (支持旧格式和新格式)
+    return url.includes('thumbnails/') || url.startsWith('app://thumbnail/');
+}
+
 // 批量移除功能
 async function batchRemove() {
     // 使用当前所有数据（包括筛选后的）
@@ -48,7 +61,7 @@ async function batchRemove() {
                 await window.electronAPI.deleteVideo(video.id);
                 
                 // 删除对应的预览图
-                if (video.thumbnailUrl) {
+                if (video.thumbnailUrl && isValidThumbnailUrl(video.thumbnailUrl)) {
                     await window.electronAPI.deleteThumbnail(video.thumbnailUrl);
                 }
                 

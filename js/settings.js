@@ -413,10 +413,32 @@ async function initQuickTagsComponent() {
         if (!allTags.includes(tag)) {
           allTags.push(tag);
           allTags.sort();
+          
+          // 同时添加到标签库(枚举值系统)中
+          try {
+            await window.electronAPI.addEnumValue('collection', tag);
+            console.log(`成功将标签 "${tag}" 添加到标签库中`);
+            
+            // 导入所需模块以触发全局更新
+            const { syncDataFromEnum } = await import('./multiSelectData.js');
+            
+            // 强制同步枚举数据并触发全局刷新
+            await syncDataFromEnum(true);
+            
+            // 手动触发自定义事件，通知所有标签选择器刷新数据
+            const event = new CustomEvent('multiselect-datasource-updated', {
+              detail: {
+                collections: await window.electronAPI.getEnumValues('collection'),
+                actors: await window.electronAPI.getEnumValues('actors'),
+                timestamp: Date.now()
+              }
+            });
+            document.dispatchEvent(event);
+            console.log('手动触发多选数据源更新事件');
+          } catch (enumError) {
+            console.error(`将标签添加到标签库失败:`, enumError);
+          }
         }
-        
-        // 同步到数据源
-        await syncDataFromEnum(true);
         
         // 同步到当前设置
         currentSettings.quickTags = tags;

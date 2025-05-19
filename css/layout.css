@@ -646,9 +646,11 @@ body {
     height: 240px;
     background-color: #f3f4f6;
     background-size: cover;
-    background-position: center;
+    background-position: center center;
+    background-repeat: no-repeat;
     border-radius: 8px;
     overflow: hidden;
+    transform: scale(1.01); /* 轻微放大以消除可能的边界缝隙 */
 }
 
 .change-preview-btn {

@@ -267,7 +267,7 @@ function switchViewMode(mode) {
  * 打开详情抽屉
  * @param {string} videoId - 视频ID
  */
-function openDetailDrawer(videoId) {
+async function openDetailDrawer(videoId) {
     console.log('打开详情抽屉, 视频ID:', videoId);
     
     // 获取视频数据
@@ -304,6 +304,32 @@ function openDetailDrawer(videoId) {
     
     // 更新查看视图内容
     updateViewModeContent(video);
+    
+    // 在填充表单之前强制刷新标签和演员数据
+    try {
+        const { syncDataFromEnum } = await import('./multiSelectData.js');
+        await syncDataFromEnum(true);
+        
+        // 手动触发组件刷新
+        if (collectionSelect || actorsSelect) {
+            const collectionsData = await window.electronAPI.getEnumValues('collection');
+            const actorsData = await window.electronAPI.getEnumValues('actors');
+            
+            console.log('打开详情抽屉时刷新枚举数据: 标签=', collectionsData.length, '演员=', actorsData.length);
+            
+            // 手动触发一次更新事件
+            const event = new CustomEvent('multiselect-datasource-updated', {
+                detail: {
+                    collections: collectionsData,
+                    actors: actorsData,
+                    timestamp: Date.now()
+                }
+            });
+            document.dispatchEvent(event);
+        }
+    } catch (error) {
+        console.error('刷新枚举数据失败:', error);
+    }
     
     // 填充编辑表单
     document.getElementById('detail-code').value = video.code || '';
@@ -505,16 +531,47 @@ function closeDetailDrawer() {
     // 重置抽屉内容
     document.getElementById('detail-preview').style.backgroundImage = '';
     document.getElementById('detail-code').value = '';
-    // 重置多选组件
+    
+    // 清理和重置多选组件
     if (collectionSelect) {
+        // 先清空值
         collectionSelect.setValue('');
+        // 清理事件监听器以防止内存泄漏
+        if (typeof collectionSelect.destroy === 'function') {
+            collectionSelect.destroy();
+        }
     }
     if (actorsSelect) {
+        // 先清空值
         actorsSelect.setValue('');
+        // 清理事件监听器以防止内存泄漏
+        if (typeof actorsSelect.destroy === 'function') {
+            actorsSelect.destroy();
+        }
     }
+    
     document.getElementById('detail-releasedate').value = '';
     document.getElementById('detail-notes').value = '';
     resetStarsToValue();
+    
+    // 重新初始化多选组件，以便下次使用
+    initMultiSelect('collection', 'collection', '搜索或添加新标签...')
+        .then(component => {
+            collectionSelect = component;
+            console.log('重置标签多选组件成功');
+        })
+        .catch(error => {
+            console.error('重置标签多选组件失败:', error);
+        });
+    
+    initMultiSelect('actors', 'actors', '搜索或添加新演员...')
+        .then(component => {
+            actorsSelect = component;
+            console.log('重置演员多选组件成功');
+        })
+        .catch(error => {
+            console.error('重置演员多选组件失败:', error);
+        });
 }
 
 /**
@@ -703,7 +760,6 @@ function setRatingValue(value) {
 
 /**
  * 播放视频
- * @param {string} videoId - 视频ID
  */
 async function playVideo(videoId) {
     console.log(`播放视频: ${videoId}`);
@@ -714,8 +770,33 @@ async function playVideo(videoId) {
     }
     
     try {
-        // 使用Electron API打开视频播放器
-        await window.electronAPI.openVideo(video.filePath);
+        // 先进行文件存在性检查
+        const { checkVideoFileExists } = await import('./utils.js');
+        const { exists, tagUpdated } = await checkVideoFileExists(video);
+        
+        if (!exists) {
+            // 文件不存在，使用自定义提示
+            const { showCustomAlert } = await import('./areaC.js');
+            showCustomAlert(`无法播放视频"${video.fileName}"，文件不存在或已被移动。`, 'error');
+            
+            // 如果标签已更新，触发数据变化事件
+            if (tagUpdated) {
+                document.dispatchEvent(new CustomEvent('videoDataChanged', {
+                    detail: { video, action: 'update' }
+                }));
+            }
+            return;
+        }
+        
+        // 文件存在，播放视频
+        const result = await window.electronAPI.openVideo(video.filePath);
+        
+        if (!result.success) {
+            // 播放失败
+            const { showCustomAlert } = await import('./areaC.js');
+            showCustomAlert(`播放视频"${video.fileName}"失败。`, 'error');
+            return;
+        }
         
         // 更新本地数据的观看次数和最后观看时间
         video.viewCount = (video.viewCount || 0) + 1;
@@ -736,11 +817,18 @@ async function playVideo(videoId) {
             setTextContent('edit-view-lastview', formattedLastView);
         }
         
-        // 重新渲染视图
-        renderTableView();
-        renderGridView();
+        // 如果标签被更新，或者视频被成功播放，重新渲染视图
+        if (tagUpdated || result.success) {
+            renderTableView();
+            renderGridView();
+        }
     } catch (error) {
         console.error('播放视频失败:', error);
+        import('./areaC.js').then(module => {
+            if (typeof module.showCustomAlert === 'function') {
+                module.showCustomAlert('播放视频时发生错误，请查看控制台了解详情。', 'error');
+            }
+        });
     }
 }
 
@@ -821,7 +909,7 @@ async function saveVideoDetails() {
         await window.electronAPI.updateVideo(updatedVideo);
         
         // 如果预览图已更新，删除旧预览图
-        if (oldThumbnailUrl && oldThumbnailUrl !== thumbnailUrl && oldThumbnailUrl.includes('thumbnails/')) {
+        if (oldThumbnailUrl && oldThumbnailUrl !== thumbnailUrl && isValidThumbnailUrl(oldThumbnailUrl)) {
             await window.electronAPI.deleteThumbnail(oldThumbnailUrl);
             console.log(`旧预览图已删除: ${oldThumbnailUrl}`);
         }
@@ -882,6 +970,22 @@ async function saveVideoDetails() {
         saveBtn.innerHTML = '<i class="fas fa-save"></i> 保存更改';
         saveBtn.disabled = false;
     }
+}
+
+/**
+ * 辅助函数：检查是否是有效的缩略图URL
+ * @param {string} url - 缩略图URL
+ * @returns {boolean} 是否是有效的缩略图URL
+ */
+function isValidThumbnailUrl(url) {
+    // 检查是否为空
+    if (!url) return false;
+    
+    // 检查是否是预设的占位图片
+    if (url === 'https://via.placeholder.com/500x280?text=No+Preview') return false;
+    
+    // 检查是否是缩略图URL (支持旧格式和新格式)
+    return url.includes('thumbnails/') || url.startsWith('app://thumbnail/');
 }
 
 /**

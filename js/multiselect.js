@@ -394,11 +394,40 @@ async function initMultiSelect(enumType, elementId, placeholder = '', delimiter 
         e.stopPropagation();
     });
     
+    // 添加对标签库更新事件的监听
+    const handleDataSourceUpdate = (e) => {
+        if (e.detail) {
+            // 根据组件类型获取对应的数据
+            const newData = enumType === 'collection' ? e.detail.collections : 
+                           (enumType === 'actors' ? e.detail.actors : null);
+            
+            if (Array.isArray(newData)) {
+                console.log(`多选组件(${enumType})收到数据更新:`, newData.length);
+                
+                // 更新所有可选项
+                allItems = [...newData];
+                
+                // 如果下拉框是打开的，重新渲染下拉选项
+                if (dropdown.classList.contains('open')) {
+                    renderDropdownItems(searchInput.value);
+                }
+            }
+        }
+    };
+    
+    // 注册事件监听
+    document.addEventListener('multiselect-datasource-updated', handleDataSourceUpdate);
+    
     // 公开的方法
     return {
         setValue,
         getValue,
-        element: container
+        element: container,
+        // 添加销毁方法，用于清理事件监听器
+        destroy: () => {
+            document.removeEventListener('multiselect-datasource-updated', handleDataSourceUpdate);
+            document.removeEventListener('click', closeDropdownOnClickOutside);
+        }
     };
 }
 
