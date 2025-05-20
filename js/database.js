@@ -65,6 +65,14 @@ enumDb.ensureIndex({ fieldName: 'type', unique: true });
 let videoCache = [];
 // 枚举值缓存
 let enumCache = {};
+// 文件检查进度状态
+let fileCheckStatus = {
+    total: 0,
+    checked: 0,
+    problems: 0,
+    inProgress: false,
+    completed: false
+};
 
 /**
  * 获取指定类型的枚举值
@@ -211,6 +219,10 @@ function initDatabase() {
     .then(() => {
         // 初始化枚举值缓存
         return initEnumCache();
+    })
+    .then(() => {
+        // 检查所有视频文件是否存在
+        return checkAllVideoFilesExist();
     })
     .then(() => {
         console.log('数据库模块初始化完成');
@@ -543,6 +555,158 @@ async function updateVideoFilePath(id, newFilePath) {
   }
 }
 
+/**
+ * 检查所有视频文件是否存在并更新标签
+ * @returns {Promise<void>}
+ */
+function checkAllVideoFilesExist() {
+    return new Promise(async (resolve, reject) => {
+        try {
+            // 如果没有视频数据，直接返回
+            if (videoCache.length === 0) {
+                console.log('没有视频数据，无需检查文件存在性');
+                resolve();
+                return;
+            }
+
+            console.log(`开始检查 ${videoCache.length} 个视频文件是否存在...`);
+            
+            // 初始化检查状态
+            fileCheckStatus = {
+                total: videoCache.length,
+                checked: 0,
+                problems: 0,
+                inProgress: true,
+                completed: false
+            };
+            
+            // 通知主进程显示进度对话框
+            if (process.type === 'renderer') {
+                window.electronAPI.startFileCheck(fileCheckStatus);
+            } else {
+                // 在主进程中时，通过相应的通道发送消息
+                const { BrowserWindow } = require('electron');
+                const mainWindow = BrowserWindow.getAllWindows()[0];
+                if (mainWindow) {
+                    mainWindow.webContents.send('file-check-progress', fileCheckStatus);
+                }
+            }
+            
+            // 使用批量处理，避免一次性处理太多文件导致UI卡顿
+            const batchSize = 20; // 每批处理的视频数量
+            const batches = Math.ceil(videoCache.length / batchSize);
+            
+            for (let batchIndex = 0; batchIndex < batches; batchIndex++) {
+                // 计算当前批次的起始和结束索引
+                const startIndex = batchIndex * batchSize;
+                const endIndex = Math.min(startIndex + batchSize, videoCache.length);
+                const currentBatch = videoCache.slice(startIndex, endIndex);
+                
+                // 处理当前批次中的每个视频
+                for (const video of currentBatch) {
+                    try {
+                        // 检查文件是否存在
+                        const exists = fs.existsSync(video.filePath);
+                        
+                        // 获取当前视频的标签
+                        const tags = video.collection ? video.collection.split(',').map(tag => tag.trim()).filter(Boolean) : [];
+                        const hasPathErrorTag = tags.includes('路径异常');
+                        
+                        // 更新标签状态
+                        let tagUpdated = false;
+                        if (!exists && !hasPathErrorTag) {
+                            // 文件不存在且没有标签，添加标签
+                            tags.push('路径异常');
+                            video.collection = tags.join(',');
+                            await updateVideo(video);
+                            tagUpdated = true;
+                            fileCheckStatus.problems++;
+                        } else if (exists && hasPathErrorTag) {
+                            // 文件存在但有标签，移除标签
+                            const newTags = tags.filter(tag => tag !== '路径异常');
+                            video.collection = newTags.join(',');
+                            await updateVideo(video);
+                            tagUpdated = true;
+                        }
+                        
+                        // 只在真正找到问题时记录日志，避免过多输出
+                        if (tagUpdated) {
+                            console.log(`文件 ${video.fileName} ${exists ? '存在' : '不存在'}, 标签已${exists ? '移除' : '添加'}`);
+                        }
+                    } catch (error) {
+                        console.error(`检查视频 ${video.fileName} 文件时出错:`, error);
+                    }
+                    
+                    // 更新进度
+                    fileCheckStatus.checked++;
+                    
+                    // 发送进度更新
+                    if (process.type === 'renderer') {
+                        window.electronAPI.updateFileCheck(fileCheckStatus);
+                    } else {
+                        const { BrowserWindow } = require('electron');
+                        const mainWindow = BrowserWindow.getAllWindows()[0];
+                        if (mainWindow) {
+                            mainWindow.webContents.send('file-check-progress', fileCheckStatus);
+                        }
+                    }
+                }
+                
+                // 在批次之间等待一小段时间，让UI有机会刷新
+                await new Promise(r => setTimeout(r, 10));
+            }
+            
+            // 完成检查
+            fileCheckStatus.inProgress = false;
+            fileCheckStatus.completed = true;
+            
+            // 发送最终状态
+            if (process.type === 'renderer') {
+                window.electronAPI.updateFileCheck(fileCheckStatus);
+            } else {
+                const { BrowserWindow } = require('electron');
+                const mainWindow = BrowserWindow.getAllWindows()[0];
+                if (mainWindow) {
+                    mainWindow.webContents.send('file-check-progress', fileCheckStatus);
+                }
+            }
+            
+            console.log(`视频文件检查完成，共检查 ${fileCheckStatus.checked} 个文件，发现 ${fileCheckStatus.problems} 个问题`);
+            resolve();
+        } catch (error) {
+            console.error('检查视频文件存在性时发生错误:', error);
+            
+            // 确保错误不会阻止应用启动
+            fileCheckStatus.inProgress = false;
+            fileCheckStatus.completed = true;
+            
+            // 即使有错误也标记为完成，避免UI卡在加载状态
+            if (process.type === 'renderer') {
+                window.electronAPI.updateFileCheck({
+                    ...fileCheckStatus,
+                    inProgress: false,
+                    completed: true,
+                    error: error.message
+                });
+            } else {
+                const { BrowserWindow } = require('electron');
+                const mainWindow = BrowserWindow.getAllWindows()[0];
+                if (mainWindow) {
+                    mainWindow.webContents.send('file-check-progress', {
+                        ...fileCheckStatus,
+                        inProgress: false,
+                        completed: true,
+                        error: error.message
+                    });
+                }
+            }
+            
+            // 仍然解析Promise，不要让错误阻止应用启动
+            resolve();
+        }
+    });
+}
+
 // 导出模块
 module.exports = {
     initDatabase,
@@ -558,5 +722,6 @@ module.exports = {
     getEnumValues,
     saveEnumValues,
     addEnumValue,
-    updateVideoFilePath
+    updateVideoFilePath,
+    getFileCheckStatus: () => ({ ...fileCheckStatus }) // 导出文件检查状态的副本
 };

@@ -3572,3 +3572,21 @@ ipcMain.handle('test-ffmpeg', async (event, args) => {
   
   return testResults;
 });
+
+// 文件检查相关
+ipcMain.handle('start-file-check', async (event, status) => {
+  console.log('处理start-file-check请求');
+  if (mainWindow) {
+    mainWindow.webContents.send('file-check-progress', status);
+  }
+  return true;
+});
+
+ipcMain.on('update-file-check', (event, status) => {
+  console.log(`文件检查进度更新: ${status.checked}/${status.total}, 问题: ${status.problems}`);
+  if (mainWindow) {
+    mainWindow.webContents.send('file-check-progress', status);
+  }
+});
+
+console.log('IPC事件处理程序注册完成');

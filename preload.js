@@ -72,4 +72,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   // 测试功能
   testFFmpeg: (args) => ipcRenderer.invoke('test-ffmpeg', args),
+
+  // 文件检查相关
+  startFileCheck: (status) => ipcRenderer.invoke('start-file-check', status),
+  updateFileCheck: (status) => ipcRenderer.send('update-file-check', status),
+  onFileCheckProgress: (callback) => {
+    const progressListener = (event, progress) => {
+      callback(progress);
+    };
+    ipcRenderer.on('file-check-progress', progressListener);
+    return () => {
+      ipcRenderer.removeListener('file-check-progress', progressListener);
+    };
+  },
 });

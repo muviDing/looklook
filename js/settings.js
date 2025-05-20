@@ -51,15 +51,17 @@ async function createSettingsModal() {
       <div class="settings-body">
         <div class="settings-sidebar">
           <ul class="settings-nav">
-            <li class="settings-nav-item active" data-section="general">常规</li>
-            <li class="settings-nav-item" data-section="import">导入</li>
+            <!-- 注释掉常规设置导航项 -->
+            <!-- <li class="settings-nav-item active" data-section="general">常规</li> -->
+            <li class="settings-nav-item active" data-section="import">导入</li>
             <li class="settings-nav-item" data-section="quickTags">快捷标签</li>
             <li class="settings-nav-item" data-section="about">关于</li>
           </ul>
         </div>
         
         <div class="settings-content">
-          <!-- 常规设置 -->
+          <!-- 常规设置部分已被注释掉 -->
+          <!-- 
           <div id="general-section" class="settings-section active">
             <div class="section-header">
               <h3 class="settings-section-title">常规设置</h3>
@@ -71,7 +73,6 @@ async function createSettingsModal() {
             <div class="settings-form-group">
               <label>启动时扫描文件夹</label>
               <div class="folder-paths-panel" id="folder-paths-panel">
-                <!-- 默认为空 -->
               </div>
               
               <button class="add-folder-btn" id="add-folder-btn">
@@ -79,9 +80,10 @@ async function createSettingsModal() {
               </button>
             </div>
           </div>
+          -->
           
           <!-- 导入设置 -->
-          <div id="import-section" class="settings-section">
+          <div id="import-section" class="settings-section active">
             <div class="section-header">
               <h3 class="settings-section-title">导入设置</h3>
               <button class="section-reset-btn" data-section="import" title="重置此栏目">
@@ -135,7 +137,7 @@ async function createSettingsModal() {
             
             <div class="about-version">
               <span class="about-version-label">当前版本</span>
-              <span class="about-version-number">V2.1.0</span>
+              <span class="about-version-number">V2.1.2</span>
             </div>
             
             <div class="feedback-card">
@@ -192,7 +194,8 @@ async function loadSettings() {
 
 // 将设置应用到UI元素
 function applySettingsToUI() {
-  // 常规设置 - 扫描文件夹
+  // 常规设置 - 扫描文件夹 - 已注释掉
+  /* 
   const folderPathsPanel = document.getElementById('folder-paths-panel');
   if (folderPathsPanel) {
     folderPathsPanel.innerHTML = '';
@@ -215,6 +218,7 @@ function applySettingsToUI() {
       });
     }
   }
+  */
   
   // 导入设置 - 标题正则
   const titleRegexInput = document.getElementById('title-regex');
@@ -239,12 +243,14 @@ function collectSettingsFromUI() {
     quickTags: []
   };
   
-  // 收集扫描文件夹
+  // 收集扫描文件夹 - 已注释掉
+  /*
   const folderItems = document.querySelectorAll('#folder-paths-panel .folder-path-item');
   folderItems.forEach(item => {
     const folderPath = item.querySelector('.folder-path').textContent;
     settings.general.scanFolders.push(folderPath);
   });
+  */
   
   // 收集快捷标签
   const quickTagsInput = document.getElementById('quick-tags');
@@ -257,13 +263,18 @@ function collectSettingsFromUI() {
 
 // 保存设置
 function saveSettings() {
-  // 获取所有扫描文件夹
+  // 获取所有扫描文件夹 - 已注释掉
+  /*
   const folderElements = document.querySelectorAll('.folder-path-item .folder-path');
   const folders = Array.from(folderElements).map(el => el.textContent);
   
   // 更新当前设置
   if (!currentSettings.general) currentSettings.general = {};
   currentSettings.general.scanFolders = folders;
+  */
+  
+  // 保持scanFolders设置不变
+  if (!currentSettings.general) currentSettings.general = {};
   
   // 获取导入设置 - 标题正则
   const titleRegexInput = document.getElementById('title-regex');
@@ -679,7 +690,8 @@ function setupSettingsEventListeners() {
   const modal = document.getElementById('settings-modal');
   const closeBtn = document.getElementById('settings-close-btn');
   const saveBtn = document.getElementById('settings-save-btn');
-  const addFolderBtn = document.getElementById('add-folder-btn');
+  // 已注释掉常规设置相关元素
+  // const addFolderBtn = document.getElementById('add-folder-btn');
   const navItems = document.querySelectorAll('.settings-nav-item');
   const sectionResetBtns = document.querySelectorAll('.section-reset-btn');
   const zhihuLink = document.getElementById('zhihu-link');
@@ -716,6 +728,40 @@ function setupSettingsEventListeners() {
     }
   });
   
+  // 设置导航项点击事件
+  navItems.forEach(item => {
+    item.addEventListener('click', function() {
+      const sectionId = this.getAttribute('data-section');
+      
+      // 重置之前标签的搜索状态（如果是从快捷标签切换出去）
+      const previousActiveTab = document.querySelector('.settings-nav-item.active');
+      if (previousActiveTab && previousActiveTab.getAttribute('data-section') === 'quickTags') {
+        resetQuickTagsSearch();
+      }
+      
+      // 激活当前导航项，取消激活其他导航项
+      navItems.forEach(navItem => {
+        navItem.classList.remove('active');
+      });
+      this.classList.add('active');
+      
+      // 显示当前内容区域，隐藏其他内容区域
+      const sections = document.querySelectorAll('.settings-section');
+      sections.forEach(section => {
+        section.classList.remove('active');
+      });
+      document.getElementById(`${sectionId}-section`).classList.add('active');
+      
+      // 如果切换到快捷标签，确保初始化组件
+      if (sectionId === 'quickTags') {
+        console.log('导航切换到快捷标签，初始化组件');
+        setTimeout(() => {
+          initQuickTagsComponent();
+        }, 10);
+      }
+    });
+  });
+  
   // 栏目重置按钮事件
   sectionResetBtns.forEach(btn => {
     btn.addEventListener('click', function() {
@@ -730,34 +776,21 @@ function setupSettingsEventListeners() {
               console.log(`确认重置 ${sectionId} 栏目，执行重置操作`);
               // 执行重置
               if (sectionId === 'general') {
-                // 重置常规设置
+                // 重置常规设置 - 已注释掉
+                /*
                 const folderPathsPanel = document.getElementById('folder-paths-panel');
                 folderPathsPanel.innerHTML = '';
                 currentSettings.general.scanFolders = [];
+                */
               } else if (sectionId === 'import') {
                 // 重置导入设置
-                document.getElementById('title-regex').value = DEFAULT_SETTINGS.import.titleRegex;
+                const titleRegexInput = document.getElementById('title-regex');
+                titleRegexInput.value = DEFAULT_SETTINGS.import.titleRegex;
                 currentSettings.import.titleRegex = DEFAULT_SETTINGS.import.titleRegex;
               } else if (sectionId === 'quickTags') {
-                // 重置快捷标签设置
-                document.getElementById('quick-tags').value = '';
+                // 重置快捷标签
                 currentSettings.quickTags = [];
-                
-                // 重新渲染标签
-                const container = document.getElementById('quick-tags-container');
-                if (container && container.querySelector) {
-                  // 尝试找到并调用渲染标签的函数
-                  const tagsContainer = document.getElementById('quick-tags-tags');
-                  if (tagsContainer) {
-                    // 清空标签容器
-                    tagsContainer.innerHTML = '';
-                  }
-                  
-                  // 如果容器有重置搜索方法，调用它
-                  if (typeof container.resetSearch === 'function') {
-                    container.resetSearch();
-                  }
-                }
+                initQuickTagsComponent();
               }
               
               // 显示重置成功的提示
@@ -777,7 +810,8 @@ function setupSettingsEventListeners() {
     });
   });
   
-  // 添加文件夹按钮事件
+  // 添加文件夹按钮事件 - 已注释掉
+  /*
   addFolderBtn.addEventListener('click', async function() {
     console.log('添加文件夹');
     
@@ -903,6 +937,7 @@ function setupSettingsEventListeners() {
       newFolderPath.remove();
     });
   }
+  */
   
   // 知乎链接点击事件，使用默认浏览器打开
   zhihuLink.addEventListener('click', function(e) {
@@ -911,12 +946,14 @@ function setupSettingsEventListeners() {
     window.electronAPI.openExternal(url);
   });
   
-  // 已有的文件夹删除按钮事件
+  // 已有的文件夹删除按钮事件 - 已注释掉
+  /*
   document.querySelectorAll('.folder-path-remove').forEach(btn => {
     btn.addEventListener('click', function() {
       this.closest('.folder-path-item').remove();
     });
   });
+  */
   
   // 重置快捷标签搜索状态的函数
   function resetQuickTagsSearch() {
@@ -925,41 +962,6 @@ function setupSettingsEventListeners() {
       container.resetSearch();
     }
   }
-  
-  // 导航选项卡切换事件
-  navItems.forEach(item => {
-    item.addEventListener('click', function() {
-      // 重置之前标签的搜索状态（如果是从快捷标签切换出去）
-      const previousActiveTab = document.querySelector('.settings-nav-item.active');
-      if (previousActiveTab && previousActiveTab.getAttribute('data-section') === 'quickTags') {
-        resetQuickTagsSearch();
-      }
-      
-      // 移除所有导航项和内容区域的active类
-      navItems.forEach(navItem => navItem.classList.remove('active'));
-      document.querySelectorAll('.settings-section').forEach(section => {
-        section.classList.remove('active');
-      });
-      
-      // 添加active类到当前选中的导航项
-      this.classList.add('active');
-      
-      // 显示对应的内容区域
-      const sectionId = this.getAttribute('data-section');
-      const section = document.getElementById(`${sectionId}-section`);
-      if (section) {
-        section.classList.add('active');
-        
-        // 如果切换到快捷标签，确保初始化组件
-        if (sectionId === 'quickTags') {
-          console.log('导航切换到快捷标签，初始化组件');
-          setTimeout(() => {
-            initQuickTagsComponent();
-          }, 10);
-        }
-      }
-    });
-  });
   
   // 阻止事件冒泡
   modal.addEventListener('click', function(event) {
@@ -970,14 +972,17 @@ function setupSettingsEventListeners() {
 // 获取栏目名称
 function getSectionName(sectionId) {
   switch (sectionId) {
+    // 注释掉常规设置
+    /* 
     case 'general':
-      return '常规';
+      return '常规设置';
+    */
     case 'import':
-      return '导入';
+      return '导入设置';
     case 'quickTags':
-      return '快捷标签';
+      return '快捷标签设置';
     case 'about':
-      return '关于';
+      return '关于应用';
     default:
       return sectionId;
   }
