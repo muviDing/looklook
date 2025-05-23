@@ -141,6 +141,34 @@ async function batchMove() {
     }
 }
 
+// 批量压缩功能
+async function batchCompress() {
+    // 使用当前所有数据（包括筛选后的）
+    const currentData = window.videoData.getVideos();
+    
+    // 获取所有选中的视频，而不仅仅是当前页的
+    const selectedVideos = currentData.filter(video => video.selected);
+    
+    if (selectedVideos.length === 0) {
+        // 使用自定义提示对话框
+        showCustomAlert('请先选择要压缩的视频');
+        return;
+    }
+    
+    try {
+        // 导入compressProgress模块并启动压缩操作
+        const { startCompressVideos } = await import('./compressProgress.js');
+        await startCompressVideos();
+        
+        // 注意：实际压缩功能尚未实现，这里仅展示界面
+        // 实际应用中，压缩完成后需要更新视频数据
+        
+    } catch (error) {
+        console.error('批量压缩失败:', error);
+        showCustomAlert('批量压缩失败: ' + error.message, 'error');
+    }
+}
+
 // 表头设置功能
 let columnSettings = {};
 
@@ -867,6 +895,15 @@ function initBatchOperationsEvents() {
     const invertSelectionBtn = document.querySelector('#batch-operations-float .invert-selection-btn');
     if (invertSelectionBtn) {
         invertSelectionBtn.addEventListener('click', invertSelection);
+    }
+    
+    // 批量压缩按钮
+    const batchCompressBtn = document.querySelector('#batch-operations-float .batch-compress-btn');
+    if (batchCompressBtn) {
+        batchCompressBtn.addEventListener('click', function() {
+            console.log('批量压缩');
+            batchCompress();
+        });
     }
     
     // 批量迁移按钮

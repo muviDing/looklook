@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, protocol } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, protocol, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const ffmpeg = require('fluent-ffmpeg');
@@ -6,10 +6,18 @@ const ffmpegPath = require('ffmpeg-static');
 // 导入ffprobe-static包获取ffprobe路径
 const ffprobePath = require('ffprobe-static').path;
 const db = require('./js/database');
+const { spawn, exec, execFile } = require('child_process');
 
 // 检测是否在打包环境中运行
 const isPackaged = app.isPackaged;
 console.log(`应用正在${isPackaged ? '打包' : '开发'}环境中运行`);
+
+// 声明压缩相关的全局变量
+let isCompressionCancelled = false;
+let isCompressionPaused = false;
+let compressionTaskQueue = [];
+let currentCompressionTask = null;
+let currentCompressionProcess = null;
 
 // 获取FFmpeg和FFprobe的正确路径
 function getExecutablePath(rawPath) {
@@ -163,6 +171,7 @@ function testFFmpegExecution() {
                 }
               }
             }
+          // 以下三行代码不要动！
           } catch (e) {
             logToFile(`[TEST] 无法列出ffprobe-static内容: ${e.message}`);
           }
@@ -2885,6 +2894,281 @@ function registerIpcHandlers() {
     };
   });
   
+  // 视频压缩相关
+  ipcMain.handle('compress-videos', async (event, videos, options) => {
+    console.log(`准备压缩 ${videos.length} 个视频`);
+    logToFile(`[COMPRESS] 准备压缩 ${videos.length} 个视频`);
+    
+    // 清理任何可能存在的上次未完成的任务和状态
+    if (currentCompressionTask) {
+      console.log('发现未完成的压缩任务，正在清理');
+      logToFile('[COMPRESS] 发现未完成的压缩任务，正在清理');
+      
+      if (currentCompressionProcess) {
+        try {
+          currentCompressionProcess.kill('SIGTERM');
+        } catch (e) {
+          console.error('终止未完成的压缩进程时出错:', e);
+        }
+        currentCompressionProcess = null;
+      }
+      
+      // 清理临时文件（如果存在）
+      if (currentCompressionTask.outputPath && fs.existsSync(currentCompressionTask.outputPath)) {
+        try {
+          fs.unlinkSync(currentCompressionTask.outputPath);
+          console.log(`已删除未完成的输出文件: ${currentCompressionTask.outputPath}`);
+          logToFile(`[COMPRESS] 已删除未完成的输出文件: ${currentCompressionTask.outputPath}`);
+        } catch (e) {
+          console.error('删除未完成的输出文件时出错:', e);
+        }
+      }
+      
+      currentCompressionTask = null;
+    }
+    
+    // 扫描目标目录，清理可能存在的上次未完成的临时文件
+    try {
+      // 获取一个视频作为示例，检查其所在目录
+      if (videos.length > 0) {
+        const sampleVideo = videos[0];
+        const videoDir = path.dirname(sampleVideo.filePath);
+        
+        // 列出目录中的所有文件
+        const files = fs.readdirSync(videoDir);
+        
+        // 查找并删除带有"_正在压缩"后缀的文件
+        for (const file of files) {
+          if (file.includes('_正在压缩')) {
+            const filePath = path.join(videoDir, file);
+            try {
+              fs.unlinkSync(filePath);
+              console.log(`已删除旧的临时文件: ${filePath}`);
+              logToFile(`[COMPRESS] 已删除旧的临时文件: ${filePath}`);
+            } catch (e) {
+              console.error(`删除旧的临时文件失败: ${filePath}`, e);
+              logToFile(`[COMPRESS] 删除旧的临时文件失败: ${filePath}, ${e.message}`);
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.error('清理旧临时文件时出错:', e);
+      logToFile(`[COMPRESS] 清理旧临时文件时出错: ${e.message}`);
+      // 继续执行，不中断主流程
+    }
+    
+    // 重置状态
+    isCompressionCancelled = false;
+    isCompressionPaused = false;
+    compressionTaskQueue = [...videos];
+    currentCompressionTask = null;
+    
+    // 统计信息
+    const total = videos.length;
+    let processed = 0;
+    let success = 0;
+    let failed = 0;
+    let pending = total;
+    let totalSavedSpace = 0;
+    const successList = [];
+    const failedList = [];
+    // 统一pendingList的格式为文件名数组，而非对象数组
+    const pendingList = videos.map(v => v.fileName);
+    
+    // 发送初始进度信息
+    mainWindow.webContents.send('compression-progress', {
+      total,
+      processed: 0,
+      success: 0,
+      failed: 0,
+      pending, // 确保初始待处理数量正确
+      percent: 0,
+      currentProgress: 0,
+      successList: [],
+      failedList: [],
+      pendingList, // 初始待处理列表
+      totalSavedSpace: 0,
+      isCompleted: false,
+      paused: false
+    });
+    
+    // 开始压缩任务
+    processNextCompressionTask(options, {
+      total,
+      processed,
+      success,
+      failed,
+      pending, // 确保待处理数量正确传递
+      totalSavedSpace,
+      successList,
+      failedList,
+      pendingList
+    });
+    
+    // 返回初始状态
+    return {
+      total,
+      processed: 0,
+      success: 0,
+      failed: 0,
+      pending: total, // 确保待处理数量正确
+      isStarted: true
+    };
+  });
+  
+  // 暂停压缩
+  ipcMain.on('pause-compression', () => {
+    console.log('用户暂停压缩视频');
+    logToFile('[COMPRESS] 用户暂停压缩视频');
+    isCompressionPaused = true;
+    
+    // 如果有正在进行的压缩任务，终止它
+    if (currentCompressionProcess) {
+      try {
+        console.log(`终止当前压缩进程: ${currentCompressionTask.fileName}`);
+        logToFile(`[COMPRESS] 终止当前压缩进程: ${currentCompressionTask.fileName}`);
+        currentCompressionProcess.kill('SIGTERM');
+        
+        // 注意：不要在这里删除临时文件和清空当前任务
+        // 这些操作会在processNextCompressionTask中处理
+        // 当进程结束时会触发暂停的处理逻辑
+      } catch (error) {
+        console.error('终止压缩进程时出错:', error);
+        logToFile(`[COMPRESS] 终止压缩进程时出错: ${error.message}`);
+      }
+    }
+    
+    // 发送暂停状态到渲染进程
+    if (mainWindow) {
+      mainWindow.webContents.send('compression-progress', { 
+        paused: true,
+        pendingList: compressionTaskQueue.map(task => task.fileName)
+      });
+    }
+  });
+  
+  // 继续压缩
+  ipcMain.on('resume-compression', () => {
+    console.log('用户继续压缩视频');
+    logToFile('[COMPRESS] 用户继续压缩视频');
+    isCompressionPaused = false;
+    
+    // 发送继续状态到渲染进程
+    if (mainWindow) {
+      mainWindow.webContents.send('compression-progress', { 
+        paused: false,
+        pendingList: compressionTaskQueue.map(task => task.fileName)
+      });
+    }
+    
+    // 继续下一个任务，但只在没有活动的压缩进程时启动
+    if (compressionTaskQueue.length > 0 && !currentCompressionTask && !currentCompressionProcess) {
+      processNextCompressionTask(currentOptions, currentStats);
+    }
+  });
+  
+  // 继续压缩（带新参数）
+  ipcMain.on('resume-compression-with-options', (event, newOptions) => {
+    console.log('用户继续压缩视频（更新参数）:', newOptions);
+    logToFile(`[COMPRESS] 用户继续压缩视频（更新参数）: ${JSON.stringify(newOptions)}`);
+    isCompressionPaused = false;
+    
+    // 更新压缩选项
+    if (newOptions) {
+      currentOptions = { ...currentOptions, ...newOptions };
+      console.log('压缩参数已更新:', currentOptions);
+      logToFile(`[COMPRESS] 压缩参数已更新: ${JSON.stringify(currentOptions)}`);
+    }
+    
+    // 发送继续状态到渲染进程
+    if (mainWindow) {
+      mainWindow.webContents.send('compression-progress', { 
+        paused: false,
+        pendingList: compressionTaskQueue.map(task => task.fileName)
+      });
+    }
+    
+    // 继续下一个任务，但只在没有活动的压缩进程时启动
+    if (compressionTaskQueue.length > 0 && !currentCompressionTask && !currentCompressionProcess) {
+      processNextCompressionTask(currentOptions, currentStats);
+    }
+  });
+  
+  // 取消压缩
+  ipcMain.on('cancel-compression', () => {
+    console.log('用户取消批量压缩任务');
+    logToFile('[COMPRESS] 用户取消批量压缩任务');
+    isCompressionCancelled = true;
+    
+    // 如果有正在进行的压缩任务，终止它
+    if (currentCompressionProcess) {
+      try {
+        console.log(`终止当前压缩进程: ${currentCompressionTask.fileName}`);
+        logToFile(`[COMPRESS] 终止当前压缩进程: ${currentCompressionTask.fileName}`);
+        currentCompressionProcess.kill('SIGTERM');
+        
+        // 注意：不要在这里删除临时文件和清空当前任务
+        // 这些操作会在processNextCompressionTask中处理
+        // 当进程结束时会触发取消的处理逻辑
+      } catch (error) {
+        console.error('终止压缩进程时出错:', error);
+        logToFile(`[COMPRESS] 终止压缩进程时出错: ${error.message}`);
+      }
+    }
+    
+    // 清空任务队列
+    const pendingCount = compressionTaskQueue.length;
+    compressionTaskQueue = [];
+    
+    // 更新UI，显示任务已取消
+    if (mainWindow) {
+      mainWindow.webContents.send('compression-progress', { 
+        cancelled: true,
+        isCompleted: true,
+        pendingList: [],
+        message: `已取消剩余 ${pendingCount} 个任务`
+      });
+    }
+  });
+  
+  // 检查GPU支持
+  ipcMain.handle('check-gpu-support', async () => {
+    console.log('检查GPU编码支持');
+    logToFile('[COMPRESS] 检查GPU编码支持');
+    
+    try {
+      const ffmpegPath = getFfmpegPath();
+      if (!ffmpegPath) {
+        console.error('无法找到ffmpeg路径');
+        logToFile('[COMPRESS] 无法找到ffmpeg路径');
+        return { supported: false, error: '无法找到ffmpeg' };
+      }
+      
+      // 检查NVIDIA编码器支持
+      const { stdout, stderr } = await execFilePromise(ffmpegPath, ['-encoders']);
+      const output = stdout + stderr;
+      
+      // 检查是否支持NVIDIA GPU编码器
+      const hasNvencSupport = output.includes('h264_nvenc') || output.includes('hevc_nvenc');
+      
+      console.log(`GPU编码支持检查结果: ${hasNvencSupport ? '支持' : '不支持'}`);
+      logToFile(`[COMPRESS] GPU编码支持检查结果: ${hasNvencSupport ? '支持' : '不支持'}`);
+      
+      return { 
+        supported: hasNvencSupport,
+        encoders: {
+          h264: output.includes('h264_nvenc'),
+          hevc: output.includes('hevc_nvenc')
+        }
+      };
+    } catch (error) {
+      console.error('检查GPU支持时出错:', error.message);
+      logToFile(`[COMPRESS] 检查GPU支持时出错: ${error.message}`);
+      return { supported: false, error: error.message };
+    }
+  });
+  
   console.log('IPC事件处理程序注册完成');
 }
 
@@ -3589,4 +3873,968 @@ ipcMain.on('update-file-check', (event, status) => {
   }
 });
 
+// 执行下一个压缩任务
+let currentOptions = null;
+let currentStats = null;
+
+async function processNextCompressionTask(options, stats) {
+  // 保存当前选项和统计信息
+  currentOptions = options;
+  currentStats = stats;
+  
+  // 检查是否已取消
+  if (isCompressionCancelled) {
+    console.log('压缩任务已取消');
+    logToFile('[COMPRESS] 压缩任务已取消');
+    return;
+  }
+  
+  // 检查是否已暂停 - 仅显示日志，不处理任务
+  if (isCompressionPaused) {
+    console.log('压缩任务已暂停');
+    logToFile('[COMPRESS] 压缩任务已暂停');
+    return;
+  }
+  
+  // 检查队列是否为空
+  if (compressionTaskQueue.length === 0) {
+    console.log('所有压缩任务已完成');
+    logToFile('[COMPRESS] 所有压缩任务已完成');
+    
+    // 发送完成状态
+    mainWindow.webContents.send('compression-progress', {
+      ...stats,
+      isCompleted: true,
+      pendingList: [],
+      pending: 0  // 确保待处理数量为0
+    });
+    
+    return;
+  }
+  
+  // 如果当前有任务在运行，不处理新任务
+  if (currentCompressionTask) {
+    console.log('已有任务在运行，不处理新任务');
+    return;
+  }
+  
+  // 从队列中获取下一个任务
+  const video = compressionTaskQueue.shift();
+  currentCompressionTask = video;
+  
+  try {
+    console.log(`开始处理视频: ${video.fileName}`);
+    logToFile(`[COMPRESS] 开始处理视频: ${video.fileName}`);
+    
+    // 解析视频文件路径和信息
+    const inputPath = video.filePath;
+    const inputDir = path.dirname(inputPath);
+    const inputName = path.basename(inputPath, path.extname(inputPath));
+    const inputExt = path.extname(inputPath);
+    
+    // 创建临时输出文件名
+    const tempOutputName = options.mode === 'perceptual' ? 
+      `${inputName}_正在压缩.mp4` : 
+      `${inputName}_正在压缩.mkv`;
+    const tempOutputPath = path.join(inputDir, tempOutputName);
+    
+    // 保存到任务对象
+    video.outputPath = tempOutputPath;
+    
+    // 检查同名临时文件是否存在，存在则删除
+    if (fs.existsSync(tempOutputPath)) {
+      console.log(`发现已存在的临时文件: ${tempOutputPath}，正在删除`);
+      logToFile(`[COMPRESS] 发现已存在的临时文件: ${tempOutputPath}，正在删除`);
+      try {
+        fs.unlinkSync(tempOutputPath);
+        console.log(`已删除临时文件: ${tempOutputPath}`);
+        logToFile(`[COMPRESS] 已删除临时文件: ${tempOutputPath}`);
+      } catch (deleteError) {
+        console.error(`删除临时文件失败: ${deleteError.message}`);
+        logToFile(`[COMPRESS] 删除临时文件失败: ${deleteError.message}`);
+        // 继续执行，尝试覆盖现有文件
+      }
+    }
+    
+    // 检查源文件是否存在
+    if (!fs.existsSync(inputPath)) {
+      throw new Error('源文件不存在');
+    }
+    
+    // 检查是否有足够的磁盘空间
+    const diskSpace = await checkDiskSpace(inputDir);
+    const videoSize = fs.statSync(inputPath).size;
+    const requiredSpace = options.mode === 'perceptual' ? 
+      videoSize * 0.5 : // 感知无损模式需要50%的空间
+      videoSize;         // 完全无损模式需要100%的空间
+    
+    if (diskSpace.free < requiredSpace) {
+      throw new Error('磁盘空间不足');
+    }
+    
+    // 如果是完全无损模式，先检测视频格式
+    let formatInfo = null;
+    if (options.mode === 'lossless') {
+      console.log('检测视频格式以选择最优压缩策略...');
+      logToFile('[COMPRESS] 检测视频格式以选择最优压缩策略...');
+      formatInfo = await detectVideoFormat(inputPath);
+      if (formatInfo) {
+        console.log(`视频格式信息: 容器=${formatInfo.container}, 视频编码=${formatInfo.videoCodec}, 音频编码=${formatInfo.audioCodec}`);
+        logToFile(`[COMPRESS] 视频格式信息: 容器=${formatInfo.container}, 视频编码=${formatInfo.videoCodec}, 音频编码=${formatInfo.audioCodec}`);
+      }
+    }
+
+    // 构建ffmpeg命令参数
+    const ffmpegArgs = buildCompressCommand(
+      inputPath, 
+      tempOutputPath, 
+      options.mode, 
+      options.useGpu,
+      formatInfo
+    );
+    
+    // 更新pending计数和pendingList
+    stats.pending = compressionTaskQueue.length;
+    stats.pendingList = compressionTaskQueue.map(task => task.fileName);
+    
+    // 发送任务开始更新
+    mainWindow.webContents.send('compression-progress', {
+      ...stats,
+      currentFile: video.fileName,
+      currentProgress: 0,
+      pendingList: stats.pendingList,
+      pending: stats.pending,
+      percent: Math.round((stats.processed / stats.total) * 100)
+    });
+    
+    // 执行压缩
+    console.log(`开始压缩视频: ${inputPath} -> ${tempOutputPath}`);
+    logToFile(`[COMPRESS] 开始压缩视频: ${inputPath} -> ${tempOutputPath}`);
+    
+    const ffmpegPath = getFfmpegPath();
+    if (!ffmpegPath) {
+      throw new Error('无法找到ffmpeg路径');
+    }
+    
+    // 记录具体命令
+    const cmdString = `${ffmpegPath} ${ffmpegArgs.join(' ')}`;
+    console.log(`ffmpeg命令: ${cmdString}`);
+    logToFile(`[COMPRESS] ffmpeg命令: ${cmdString}`);
+    
+    // 启动ffmpeg进程
+    const ffmpegProcess = spawn(ffmpegPath, ffmpegArgs);
+    currentCompressionProcess = ffmpegProcess;
+    
+    let duration = null;
+    let lastProgressUpdate = Date.now();
+    
+    // 处理数据
+    ffmpegProcess.stderr.on('data', (data) => {
+      const output = data.toString();
+      
+      // 检查是否取消或暂停
+      if (isCompressionCancelled || isCompressionPaused) {
+        return;
+      }
+      
+      // 尝试提取总时长（如果还没有的话）
+      if (!duration) {
+        const durationMatch = output.match(/Duration: (\d{2}):(\d{2}):(\d{2})\.(\d{2})/);
+        if (durationMatch) {
+          const hours = parseInt(durationMatch[1]);
+          const minutes = parseInt(durationMatch[2]);
+          const seconds = parseInt(durationMatch[3]);
+          duration = hours * 3600 + minutes * 60 + seconds;
+        }
+      }
+      
+      // 提取当前进度
+      const timeMatch = output.match(/time=(\d{2}):(\d{2}):(\d{2})\.(\d{2})/);
+      if (timeMatch && duration) {
+        const hours = parseInt(timeMatch[1]);
+        const minutes = parseInt(timeMatch[2]);
+        const seconds = parseInt(timeMatch[3]);
+        const currentTime = hours * 3600 + minutes * 60 + seconds;
+        const progress = Math.round((currentTime / duration) * 100);
+        
+        // 限制更新频率（每200ms更新一次）
+        const now = Date.now();
+        if (now - lastProgressUpdate >= 200) {
+          lastProgressUpdate = now;
+          
+          // 发送进度更新
+          mainWindow.webContents.send('compression-progress', {
+            ...stats,
+            currentFile: video.fileName,
+            currentProgress: progress,
+            pendingList: stats.pendingList,
+            pending: stats.pending,
+            percent: Math.round((stats.processed / stats.total) * 100)
+          });
+        }
+      }
+    });
+    
+    // 等待进程完成
+    const exitCode = await new Promise((resolve) => {
+      ffmpegProcess.on('close', (code) => {
+        resolve(code);
+      });
+    });
+    
+    // 重置当前进程引用
+    currentCompressionProcess = null;
+    
+    // 如果压缩过程中被取消或暂停，要相应处理
+    if (isCompressionCancelled) {
+      console.log('压缩已取消，清理资源');
+      logToFile('[COMPRESS] 压缩已取消，清理资源');
+      
+      // 清理临时文件
+      if (fs.existsSync(tempOutputPath)) {
+        try {
+          fs.unlinkSync(tempOutputPath);
+          console.log(`已删除临时文件: ${tempOutputPath}`);
+          logToFile(`[COMPRESS] 已删除临时文件: ${tempOutputPath}`);
+        } catch (error) {
+          console.error(`删除临时文件失败: ${error.message}`);
+          logToFile(`[COMPRESS] 删除临时文件失败: ${error.message}`);
+        }
+      }
+      
+      // 清理当前任务引用
+      currentCompressionTask = null;
+      return;
+    }
+    
+    // 如果压缩过程中被暂停，将任务放回队列前端
+    if (isCompressionPaused) {
+      console.log('压缩已暂停，将当前任务重新加入队列');
+      logToFile('[COMPRESS] 压缩已暂停，将当前任务重新加入队列');
+      
+      // 清理临时文件
+      if (fs.existsSync(tempOutputPath)) {
+        try {
+          fs.unlinkSync(tempOutputPath);
+          console.log(`已删除临时文件: ${tempOutputPath}`);
+          logToFile(`[COMPRESS] 已删除临时文件: ${tempOutputPath}`);
+        } catch (error) {
+          console.error(`删除临时文件失败: ${error.message}`);
+          logToFile(`[COMPRESS] 删除临时文件失败: ${error.message}`);
+        }
+      }
+      
+      // 将当前任务重新放回队列前端
+      compressionTaskQueue.unshift(video);
+      
+      // 更新待处理列表
+      stats.pending = compressionTaskQueue.length;
+      stats.pendingList = compressionTaskQueue.map(task => task.fileName);
+      
+      // 发送更新
+      mainWindow.webContents.send('compression-progress', {
+        ...stats,
+        currentFile: '',
+        currentProgress: 0,
+        pendingList: stats.pendingList,
+        pending: stats.pending,
+        percent: Math.round((stats.processed / stats.total) * 100)
+      });
+      
+      // 清理当前任务引用
+      currentCompressionTask = null;
+      return;
+    }
+    
+    // 检查进程是否成功
+    if (exitCode !== 0) {
+      // 针对GPU相关的错误代码提供更友好的错误信息
+      let errorMessage = `视频压缩失败，错误代码: ${exitCode}`;
+      
+      if (exitCode === 4294967256 && options.useGpu) {
+        errorMessage = 'GPU加速不可用：显卡驱动版本过低或硬件不支持，请更新驱动或使用标准模式';
+      } else if (exitCode === 1 && options.useGpu) {
+        errorMessage = 'GPU编码器初始化失败：硬件不支持或驱动问题，建议使用标准模式';
+      } else if (options.useGpu && (exitCode === 4294967295 || exitCode === 4294967274)) {
+        errorMessage = 'GPU硬件不支持当前编码格式，请使用标准模式压缩';
+      }
+      
+      throw new Error(errorMessage);
+    }
+    
+    // 检查输出文件是否存在且大小合理
+    if (!fs.existsSync(tempOutputPath) || fs.statSync(tempOutputPath).size === 0) {
+      throw new Error('输出文件创建失败或大小为0');
+    }
+    
+    // 执行后续的文件重命名和记录更新操作
+    console.log('视频压缩成功:', tempOutputPath);
+    logToFile(`[COMPRESS] 视频压缩成功: ${tempOutputPath}`);
+    
+    // 计算节省的空间
+    const originalSize = fs.statSync(inputPath).size;
+    const compressedSize = fs.statSync(tempOutputPath).size;
+    const savedSpace = originalSize - compressedSize;
+    const savedSpaceMB = Math.round(savedSpace / (1024 * 1024));
+    
+    // 检查压缩后文件大小是否真的减小了
+    if (compressedSize >= originalSize) {
+      const originalSizeMB = Math.round(originalSize / (1024 * 1024));
+      const compressedSizeMB = Math.round(compressedSize / (1024 * 1024));
+      const errorMsg = `压缩后文件大小未减小（原文件：${originalSizeMB}MB，压缩后：${compressedSizeMB}MB），可能原文件已经高度优化`;
+      
+      console.log(errorMsg);
+      logToFile(`[COMPRESS] ${errorMsg}`);
+      
+      // 清理临时文件
+      if (fs.existsSync(tempOutputPath)) {
+        try {
+          fs.unlinkSync(tempOutputPath);
+          console.log(`已删除无效的压缩文件: ${tempOutputPath}`);
+          logToFile(`[COMPRESS] 已删除无效的压缩文件: ${tempOutputPath}`);
+        } catch (error) {
+          console.error(`删除无效压缩文件失败: ${error.message}`);
+          logToFile(`[COMPRESS] 删除无效压缩文件失败: ${error.message}`);
+        }
+      }
+      
+      throw new Error(errorMsg);
+    }
+    
+    console.log(`压缩成功，节省空间: ${savedSpaceMB}MB (${Math.round((savedSpace / originalSize) * 100)}%)`);
+    logToFile(`[COMPRESS] 压缩成功，节省空间: ${savedSpaceMB}MB (${Math.round((savedSpace / originalSize) * 100)}%)`);
+    
+    // 重命名原文件（添加"_原文件"后缀）
+    const renamedOriginalName = `${inputName}_原文件${inputExt}`;
+    const renamedOriginalPath = path.join(inputDir, renamedOriginalName);
+    
+    // 确定新文件的最终名称
+    const finalOutputName = options.mode === 'perceptual' ? 
+      `${inputName}.mp4` : 
+      `${inputName}.mkv`;
+    const finalOutputPath = path.join(inputDir, finalOutputName);
+    
+    // 执行文件重命名
+    fs.renameSync(inputPath, renamedOriginalPath);
+    fs.renameSync(tempOutputPath, finalOutputPath);
+    
+    console.log(`原文件已重命名: ${inputPath} -> ${renamedOriginalPath}`);
+    console.log(`压缩文件已重命名: ${tempOutputPath} -> ${finalOutputPath}`);
+    logToFile(`[COMPRESS] 原文件已重命名: ${inputPath} -> ${renamedOriginalPath}`);
+    logToFile(`[COMPRESS] 压缩文件已重命名: ${tempOutputPath} -> ${finalOutputPath}`);
+    
+    // 更新数据库记录
+    try {
+      // 获取完整的原视频记录
+      const originalVideoFull = await db.getVideoById(video.id);
+      
+      if (!originalVideoFull) {
+        console.error(`找不到ID为 ${video.id} 的视频记录`);
+        logToFile(`[COMPRESS] 找不到ID为 ${video.id} 的视频记录`);
+        throw new Error(`找不到ID为 ${video.id} 的视频记录`);
+      }
+      
+      console.log(`已获取到原视频记录:`, originalVideoFull);
+      logToFile(`[COMPRESS] 已获取到原视频记录: ID=${originalVideoFull.id}, 文件名=${originalVideoFull.fileName}`);
+      
+      // 创建一个包含原记录所有属性的新对象，更新文件路径和文件名
+      const originalVideo = { 
+        ...originalVideoFull, 
+        filePath: renamedOriginalPath, 
+        fileName: renamedOriginalName 
+      };
+      
+      // 如果勾选了自动打标签，添加"压缩前"标签到collection字段
+      if (options.autoTag) {
+        originalVideo.collection = processCollectionTags(originalVideo.collection, '压缩前');
+      }
+      
+      console.log(`更新原视频记录:`, originalVideo);
+      logToFile(`[COMPRESS] 更新原视频记录: ID=${originalVideo.id}, 新文件名=${originalVideo.fileName}`);
+      
+      // 更新数据库中的原视频记录
+      await db.updateVideo(originalVideo);
+      
+      // 生成新的唯一ID，确保不与现有ID冲突
+      let newId = generateUniqueId();
+      // 检查ID是否已存在，如果存在则重新生成
+      let idExists = await isIdExistsInDatabase(newId);
+      let attemptCount = 0;
+      const maxAttempts = 5; // 最大尝试次数
+      
+      while (idExists && attemptCount < maxAttempts) {
+        console.log(`ID ${newId} 已存在，重新生成`);
+        logToFile(`[COMPRESS] ID ${newId} 已存在，重新生成`);
+        newId = generateUniqueId();
+        idExists = await isIdExistsInDatabase(newId);
+        attemptCount++;
+      }
+      
+      if (idExists) {
+        console.warn(`无法生成唯一ID，使用当前值: ${newId}`);
+        logToFile(`[COMPRESS] 警告: 无法生成唯一ID，使用当前值: ${newId}`);
+      } else {
+        console.log(`生成唯一ID: ${newId}`);
+        logToFile(`[COMPRESS] 生成唯一ID: ${newId}`);
+      }
+      
+      // 复制缩略图文件
+      const newThumbnailUrl = await copyThumbnail(originalVideoFull.thumbnailUrl, newId);
+      
+      // 获取新视频的分辨率和时长
+      let newResolution = '';
+      let newDuration = '';
+      
+      try {
+        newResolution = await getVideoResolution(finalOutputPath) || originalVideoFull.resolution;
+        logToFile(`[COMPRESS] 获取新视频分辨率: ${newResolution}`);
+      } catch (error) {
+        console.error('获取新视频分辨率失败:', error);
+        logToFile(`[COMPRESS] 获取新视频分辨率失败: ${error.message}`);
+        // 使用原视频分辨率作为后备
+        newResolution = originalVideoFull.resolution;
+      }
+      
+      try {
+        newDuration = await getVideoDuration(finalOutputPath) || originalVideoFull.duration;
+        logToFile(`[COMPRESS] 获取新视频时长: ${newDuration}`);
+      } catch (error) {
+        console.error('获取新视频时长失败:', error);
+        logToFile(`[COMPRESS] 获取新视频时长失败: ${error.message}`);
+        // 使用原视频时长作为后备
+        newDuration = originalVideoFull.duration;
+      }
+      
+      // 创建新视频记录 - 只继承特定字段，其他字段基于新文件重新生成
+      const compressedVideo = {
+        // 新生成的属性
+        id: newId,
+        filePath: finalOutputPath,
+        fileName: finalOutputName,
+        fileSize: formatFileSize(compressedSize),
+        thumbnailUrl: newThumbnailUrl || originalVideoFull.thumbnailUrl, // 如果复制失败则使用原缩略图
+        importDate: new Date().toISOString(),
+        resolution: newResolution,
+        duration: newDuration,
+        selected: false,
+        
+        // 从B继承的应用属性
+        code: originalVideoFull.code || '',
+        actors: originalVideoFull.actors || '',
+        rating: originalVideoFull.rating || 0, // 添加评分继承
+        viewCount: originalVideoFull.viewCount || 0,
+        lastViewDate: originalVideoFull.lastViewDate || '',
+        notes: originalVideoFull.notes || '',
+        releaseDate: originalVideoFull.releaseDate || '',
+        
+        // 先继承B的原始标签
+        collection: originalVideoFull.collection || ''
+      };
+      
+      // 如果勾选了自动打标签，为新记录添加对应的压缩类型标签
+      if (options.autoTag) {
+        const compressTypeTag = options.mode === 'perceptual' ? 
+          (options.useGpu ? '已压缩_高效感知无损_GPU' : '已压缩_高效感知无损') :
+          (options.useGpu ? '已压缩_完全无损_GPU' : '已压缩_完全无损');
+        
+        compressedVideo.collection = processCollectionTags(compressedVideo.collection, compressTypeTag);
+      }
+      
+      console.log(`新视频记录属性:`, {
+        id: compressedVideo.id,
+        tags: compressedVideo.collection ? compressedVideo.collection.split(',').map(t => t.trim()) : [],
+        rating: compressedVideo.rating,
+        autoTag: options.autoTag
+      });
+      logToFile(`[压缩] 新视频记录属性: ${JSON.stringify({
+        id: compressedVideo.id,
+        tags: compressedVideo.collection ? compressedVideo.collection.split(',').map(t => t.trim()) : [],
+        rating: compressedVideo.rating,
+        autoTag: options.autoTag
+      })}`);
+      
+      // 保存新视频记录到数据库
+      let savedVideo = null;
+      try {
+        // 先尝试查询是否已存在同ID记录
+        const existingVideo = await db.getVideoById(compressedVideo.id);
+        if (existingVideo) {
+          // 如果已存在同ID记录，生成新ID
+          console.warn(`数据库中已存在ID为 ${compressedVideo.id} 的记录，重新生成ID`);
+          logToFile(`[COMPRESS] 警告: 数据库中已存在ID为 ${compressedVideo.id} 的记录，重新生成ID`);
+          
+          // 重新生成ID
+          compressedVideo.id = generateUniqueId() + '-' + Date.now();
+          console.log(`使用新ID: ${compressedVideo.id}`);
+          logToFile(`[COMPRESS] 使用新ID: ${compressedVideo.id}`);
+        }
+        
+        // 保存视频记录
+        savedVideo = await db.saveVideo(compressedVideo);
+        console.log(`新视频记录已保存: ${savedVideo ? savedVideo.id : '未知ID'}`);
+        logToFile(`[COMPRESS] 新视频记录已保存: ID=${savedVideo ? savedVideo.id : '未知ID'}`);
+      } catch (saveError) {
+        console.error('保存新视频记录失败:', saveError);
+        logToFile(`[COMPRESS] 保存新视频记录失败: ${saveError.message}`);
+        
+        // 失败时，尝试使用强制插入
+        try {
+          // 添加时间戳后缀确保ID唯一
+          compressedVideo.id = compressedVideo.id + '-retry-' + Date.now();
+          savedVideo = await db.saveVideo(compressedVideo);
+          console.log(`新视频记录已强制保存: ${savedVideo ? savedVideo.id : '未知ID'}`);
+          logToFile(`[COMPRESS] 新视频记录已强制保存: ID=${savedVideo ? savedVideo.id : '未知ID'}`);
+        } catch (retryError) {
+          console.error('强制保存新视频记录失败:', retryError);
+          logToFile(`[COMPRESS] 强制保存新视频记录失败: ${retryError.message}`);
+        }
+      }
+      
+      // 如果勾选了自动删除原文件，执行删除
+      if (options.autoDelete) {
+        console.log(`删除原文件: ${renamedOriginalPath}`);
+        logToFile(`[COMPRESS] 删除原文件: ${renamedOriginalPath}`);
+        
+        // 移动文件到回收站
+        shell.trashItem(renamedOriginalPath).then(() => {
+          console.log('原文件已移至回收站');
+          logToFile('[COMPRESS] 原文件已移至回收站');
+          
+          // 从数据库中删除原视频记录
+          db.deleteVideo(originalVideo.id).then(() => {
+            console.log(`原视频记录已从数据库删除: ${originalVideo.id}`);
+            logToFile(`[COMPRESS] 原视频记录已从数据库删除: ${originalVideo.id}`);
+          }).catch(err => {
+            console.error('从数据库中删除视频记录失败:', err);
+            logToFile(`[COMPRESS] 从数据库中删除视频记录失败: ${err.message}`);
+          });
+        }).catch(err => {
+          console.error('移动原文件到回收站失败:', err);
+          logToFile(`[COMPRESS] 移动原文件到回收站失败: ${err.message}`);
+        });
+      }
+    } catch (dbError) {
+      console.error('更新数据库记录失败:', dbError);
+      logToFile(`[COMPRESS] 更新数据库记录失败: ${dbError.message}`);
+      // 不中断任务，继续处理下一个
+    }
+    
+    // 添加到成功列表
+    stats.successList.push({
+      id: video.id,
+      fileName: video.fileName,
+      filePath: video.filePath,
+      originalSize: Math.round(originalSize / (1024 * 1024)),
+      compressedSize: Math.round(compressedSize / (1024 * 1024)),
+      savedSpace: savedSpaceMB,
+      mode: options.mode,
+      useGpu: options.useGpu,
+      autoTag: options.autoTag,
+      autoDelete: options.autoDelete
+    });
+    
+    // 更新统计 - 任务完成后才更新
+    stats.success++;
+    stats.processed++;
+    stats.totalSavedSpace += savedSpaceMB;
+    
+    // 更新pendingList和pending计数 - 确保准确显示剩余任务
+    stats.pending = compressionTaskQueue.length;
+    stats.pendingList = compressionTaskQueue.map(task => task.fileName);
+    
+    // 更新UI
+    mainWindow.webContents.send('compression-progress', {
+      ...stats,
+      currentFile: '',
+      currentProgress: 100,
+      pendingList: stats.pendingList,
+      pending: stats.pending,
+      percent: Math.round((stats.processed / stats.total) * 100)
+    });
+    
+    console.log(`视频处理完成 (${stats.processed}/${stats.total}): ${video.fileName}`);
+    logToFile(`[COMPRESS] 视频处理完成 (${stats.processed}/${stats.total}): ${video.fileName}`);
+    
+  } catch (error) {
+    console.error(`处理视频 ${video.fileName} 失败:`, error);
+    logToFile(`[COMPRESS] 处理视频 ${video.fileName} 失败: ${error.message}`);
+    
+    // 清理可能存在的临时文件
+    if (video.outputPath && fs.existsSync(video.outputPath)) {
+      try {
+        fs.unlinkSync(video.outputPath);
+        console.log(`已删除未完成的输出文件: ${video.outputPath}`);
+        logToFile(`[COMPRESS] 已删除未完成的输出文件: ${video.outputPath}`);
+      } catch (deleteError) {
+        console.error(`删除未完成的输出文件失败: ${deleteError.message}`);
+        logToFile(`[COMPRESS] 删除未完成的输出文件失败: ${deleteError.message}`);
+      }
+    }
+    
+    // 添加到失败列表
+    stats.failedList.push({
+      id: video.id,
+      fileName: video.fileName,
+      filePath: video.filePath,
+      error: error.message
+    });
+    
+    // 更新统计
+    stats.failed++;
+    stats.processed++;
+    
+    // 更新pendingList和pending计数 - 确保准确显示剩余任务
+    stats.pending = compressionTaskQueue.length;
+    stats.pendingList = compressionTaskQueue.map(task => task.fileName);
+  }
+  
+  // 重置当前任务引用
+  currentCompressionTask = null;
+  
+  // 发送进度更新
+  mainWindow.webContents.send('compression-progress', {
+    ...stats,
+    pendingList: stats.pendingList,
+    pending: stats.pending,
+    percent: Math.round((stats.processed / stats.total) * 100)
+  });
+  
+  // 如果已取消或暂停，不继续处理下一个任务
+  if (isCompressionCancelled) {
+    console.log('由于用户取消，停止处理后续任务');
+    logToFile('[COMPRESS] 由于用户取消，停止处理后续任务');
+    return;
+  }
+  
+  if (isCompressionPaused) {
+    console.log('压缩已暂停，等待用户恢复');
+    logToFile('[COMPRESS] 压缩已暂停，等待用户恢复');
+    return;
+  }
+  
+  // 处理下一个任务 - 延迟一点时间以防止过于频繁的处理
+  setTimeout(() => {
+    processNextCompressionTask(options, stats);
+  }, 300);
+}
+
+// 构建压缩命令参数
+function buildCompressCommand(inputPath, outputPath, mode, useGpu, formatInfo = null) {
+  const args = ['-i', inputPath]; // 输入文件
+  
+  if (mode === 'perceptual') {
+    // 高效感知无损模式
+    if (useGpu) {
+      // 使用GPU加速 (NVIDIA)
+      args.push(
+        '-c:v', 'hevc_nvenc',
+        '-preset', 'p4',
+        '-profile:v', 'main',
+        '-rc:v', 'vbr',
+        '-qmin', '0',
+        '-qmax', '28',
+        '-b:v', '0'
+      );
+    } else {
+      // 使用CPU
+      args.push(
+        '-c:v', 'libx265',
+        '-crf', '28',
+        '-preset', 'medium'
+      );
+    }
+    
+    // 音频设置
+    args.push(
+      '-c:a', 'aac',
+      '-b:a', '128k'
+    );
+    
+    // 其他优化
+    args.push(
+      '-movflags', '+faststart',
+      '-pix_fmt', 'yuv420p'
+    );
+  } else {
+    // 完全无损模式 - 使用智能策略
+    if (formatInfo) {
+      return buildLosslessCommand(inputPath, outputPath, formatInfo, useGpu);
+    } else {
+      // 如果没有格式信息，使用传统的无损编码
+      if (useGpu) {
+        // 使用GPU加速 (NVIDIA)
+        args.push(
+          '-c:v', 'h264_nvenc',
+          '-preset', 'p1',
+          '-rc', 'constqp',
+          '-qp', '0'
+        );
+      } else {
+        // 使用CPU
+        args.push(
+          '-c:v', 'libx264',
+          '-crf', '0',
+          '-preset', 'medium'
+        );
+      }
+      
+      // 无损音频
+      args.push('-c:a', 'flac');
+      
+      // 保留元数据
+      args.push(
+        '-map_metadata', '0',
+        '-map_chapters', '0'
+      );
+    }
+  }
+  
+  // 输出文件
+  args.push('-y', outputPath);
+  
+  return args;
+}
+
+// 辅助函数: 检查磁盘空间
+async function checkDiskSpace(directoryPath) {
+  return new Promise((resolve, reject) => {
+    if (process.platform === 'win32') {
+      // Windows平台
+      const driveLetter = path.parse(directoryPath).root;
+      
+      exec(`wmic logicaldisk where DeviceID="${driveLetter.replace('\\', '')}" get FreeSpace,Size /value`, (error, stdout) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+        
+        const freeMatch = stdout.match(/FreeSpace=(\d+)/i);
+        const sizeMatch = stdout.match(/Size=(\d+)/i);
+        
+        if (freeMatch && sizeMatch) {
+          resolve({
+            free: parseInt(freeMatch[1]),
+            size: parseInt(sizeMatch[1])
+          });
+        } else {
+          reject(new Error('无法获取磁盘空间信息'));
+        }
+      });
+    } else {
+      // Unix/Linux/Mac平台
+      exec(`df -k "${directoryPath}"`, (error, stdout) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+        
+        const lines = stdout.trim().split('\n');
+        if (lines.length < 2) {
+          reject(new Error('无法获取磁盘空间信息'));
+          return;
+        }
+        
+        const parts = lines[1].split(/\s+/);
+        const size = parseInt(parts[1]) * 1024;
+        const free = parseInt(parts[3]) * 1024;
+        
+        resolve({ free, size });
+      });
+    }
+  });
+}
+
+// 辅助函数: Promise化的execFile
+function execFilePromise(file, args) {
+  return new Promise((resolve, reject) => {
+    execFile(file, args, (error, stdout, stderr) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve({ stdout, stderr });
+      }
+    });
+  });
+}
+
 console.log('IPC事件处理程序注册完成');
+console.log('IPC事件处理程序注册完成');
+
+// 生成唯一ID的函数
+function generateUniqueId() {
+  // 添加前缀以区分压缩生成的记录
+  const prefix = 'comp';
+  // 使用时间戳+随机字符来生成简易UUID
+  const timestamp = new Date().getTime();
+  const randomChars = Math.random().toString(36).substring(2, 10) + 
+                     Math.random().toString(36).substring(2, 10);
+  return `${prefix}-${timestamp}-${randomChars}`;
+}
+
+// 复制缩略图文件并返回新路径
+async function copyThumbnail(thumbnailUrl, newId) {
+  console.log(`复制缩略图: ${thumbnailUrl}, 新ID: ${newId}`);
+  logToFile(`[COMPRESS] 复制缩略图: ${thumbnailUrl}, 新ID: ${newId}`);
+  
+  if (!thumbnailUrl) {
+    console.log('缩略图URL为空，跳过复制');
+    logToFile('[COMPRESS] 缩略图URL为空，跳过复制');
+    return null;
+  }
+  
+  try {
+    // 获取缩略图目录
+    const thumbnailDir = getThumbnailDir();
+    
+    // 创建基于新ID的文件名
+    const newFileName = `${newId}.jpg`;
+    const destPath = path.join(thumbnailDir, newFileName);
+    
+    // 源文件路径
+    const sourcePath = getThumbnailPath(thumbnailUrl);
+    if (!sourcePath || !fs.existsSync(sourcePath)) {
+      console.log(`源缩略图不存在: ${sourcePath}`);
+      logToFile(`[COMPRESS] 源缩略图不存在: ${sourcePath}`);
+      return null;
+    }
+    
+    // 复制文件
+    fs.copyFileSync(sourcePath, destPath);
+    
+    // 返回新URL
+    const newUrl = getThumbnailUrl(newFileName);
+    console.log(`缩略图复制成功: ${newUrl}`);
+    logToFile(`[COMPRESS] 缩略图复制成功: ${newUrl}`);
+    
+    return newUrl;
+  } catch (error) {
+    console.error('复制缩略图失败:', error);
+    logToFile(`[COMPRESS] 复制缩略图失败: ${error.message}`);
+    return null;
+  }
+}
+
+// 处理collection标签
+function processCollectionTags(existingCollection, newTag) {
+  if (!newTag) return existingCollection || '';
+  
+  // 解析现有标签
+  const tags = existingCollection ? 
+    existingCollection.split(',').map(tag => tag.trim()).filter(Boolean) : 
+    [];
+  
+  // 添加新标签（如果不存在）
+  if (!tags.includes(newTag)) {
+    tags.push(newTag);
+  }
+  
+  // 重新组合并返回
+  return tags.join(',');
+}
+
+// 检查ID是否存在于数据库中
+async function isIdExistsInDatabase(id) {
+  try {
+    const video = await db.getVideoById(id);
+    return !!video; // 如果找到视频，返回true；否则返回false
+  } catch (error) {
+    console.error(`检查ID是否存在时出错: ${error.message}`);
+    // 出错时假设ID可能存在，以避免冲突
+    return true;
+  }
+}
+
+// 检测视频文件的编码格式
+async function detectVideoFormat(videoPath) {
+  try {
+    const ffprobePath = getFfprobePath();
+    if (!ffprobePath) {
+      throw new Error('无法找到ffprobe路径');
+    }
+    
+    const { stdout } = await execFilePromise(ffprobePath, [
+      '-v', 'quiet',
+      '-print_format', 'json',
+      '-show_format',
+      '-show_streams',
+      videoPath
+    ]);
+    
+    const info = JSON.parse(stdout);
+    const videoStream = info.streams.find(stream => stream.codec_type === 'video');
+    const audioStream = info.streams.find(stream => stream.codec_type === 'audio');
+    
+    return {
+      container: info.format.format_name,
+      videoCodec: videoStream ? videoStream.codec_name : null,
+      audioCodec: audioStream ? audioStream.codec_name : null,
+      duration: parseFloat(info.format.duration) || 0,
+      size: parseInt(info.format.size) || 0
+    };
+  } catch (error) {
+    console.error('检测视频格式失败:', error);
+    logToFile(`[COMPRESS] 检测视频格式失败: ${error.message}`);
+    return null;
+  }
+}
+
+// 构建智能无损压缩命令
+function buildLosslessCommand(inputPath, outputPath, formatInfo, useGpu) {
+  const args = ['-i', inputPath];
+  
+  // 检查是否可以使用流复制
+  const canCopyVideo = ['h264', 'hevc', 'h265'].includes(formatInfo.videoCodec?.toLowerCase());
+  const canCopyAudio = ['aac', 'flac', 'mp3'].includes(formatInfo.audioCodec?.toLowerCase());
+  
+  if (canCopyVideo && canCopyAudio) {
+    // 策略1: 完全流复制（remux）
+    console.log('使用流复制策略（remux）');
+    logToFile('[COMPRESS] 使用流复制策略（remux）');
+    args.push(
+      '-c:v', 'copy',
+      '-c:a', 'copy',
+      '-avoid_negative_ts', 'make_zero'
+    );
+  } else if (canCopyVideo && !canCopyAudio) {
+    // 策略2: 视频流复制，音频重编码
+    console.log('使用视频流复制+音频重编码策略');
+    logToFile('[COMPRESS] 使用视频流复制+音频重编码策略');
+    args.push(
+      '-c:v', 'copy',
+      '-c:a', 'aac',
+      '-b:a', '128k'
+    );
+  } else {
+    // 策略3: 完全重编码
+    console.log('使用完全重编码策略');
+    logToFile('[COMPRESS] 使用完全重编码策略');
+    
+    if (useGpu) {
+      args.push(
+        '-c:v', 'h264_nvenc',
+        '-preset', 'p1',
+        '-rc', 'constqp',
+        '-qp', '0'
+      );
+    } else {
+      args.push(
+        '-c:v', 'libx264',
+        '-crf', '0',
+        '-preset', 'medium'
+      );
+    }
+    
+    args.push('-c:a', 'flac');
+    
+    // 保留元数据
+    args.push(
+      '-map_metadata', '0',
+      '-map_chapters', '0'
+    );
+  }
+  
+  // 输出文件
+  args.push('-y', outputPath);
+  
+  return args;
+}

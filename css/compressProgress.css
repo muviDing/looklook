@@ -1,0 +1,181 @@
+/* 压缩进度弹窗样式 */
+/* 大部分样式继承自importProgress.css，这里只添加特定的样式 */
+
+/* 压缩模式选择样式 */
+.compress-mode-container {
+  margin-bottom: 16px;
+}
+
+.compress-mode-title {
+  font-weight: 500;
+  color: #374151;
+  margin-bottom: 8px;
+}
+
+.compress-mode-options {
+  display: flex;
+  gap: 16px;
+}
+
+.mode-option {
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.mode-option label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.mode-option input[type="radio"] {
+  margin-right: 6px;
+}
+
+.tooltip-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.info-icon {
+  color: #9ca3af;
+  margin-left: 4px;
+  cursor: help;
+}
+
+.tooltip {
+  position: absolute;
+  visibility: hidden;
+  opacity: 0;
+  width: 200px;
+  background-color: #1f2937;
+  color: #fff;
+  text-align: left;
+  border-radius: 6px;
+  padding: 8px 10px;
+  z-index: 1000;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 8px;
+  transition: opacity 0.2s;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  font-size: 11px;
+  line-height: 1.3;
+  max-height: 80px;
+  overflow-y: auto;
+}
+
+/* 调整tooltip箭头位置 */
+.tooltip::before {
+  content: "";
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  margin-left: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: transparent transparent #1f2937 transparent;
+}
+
+/* 确保tooltip不会超出视窗 */
+.tooltip-wrapper:nth-child(1) .tooltip {
+  left: 0;
+  transform: translateX(0);
+}
+
+.tooltip-wrapper:nth-child(1) .tooltip::before {
+  left: 20px;
+}
+
+.tooltip-wrapper:hover .tooltip {
+  visibility: visible;
+  opacity: 1;
+}
+
+/* 选项样式 */
+.compress-options {
+  margin-bottom: 16px;
+}
+
+.option-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.option-item:last-child {
+  margin-bottom: 0;
+}
+
+.option-item input[type="checkbox"] {
+  margin-right: 8px;
+}
+
+/* 特别提示样式 */
+.special-note {
+  background-color: #f9fafb;
+  border-radius: 4px;
+  padding: 10px 12px;
+  margin-bottom: 16px;
+  font-size: 13px;
+  color: #6b7280;
+  line-height: 1.4;
+}
+
+/* 待压缩数量的颜色 */
+.stat-item.pending .stat-count {
+  color: #6366f1; /* Indigo */
+}
+
+/* 图标提示样式 */
+.file-info-icons {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+}
+
+.file-info-icons i {
+  margin-left: 5px;
+  color: #6b7280;
+  font-size: 13px;
+  transition: color 0.2s;
+}
+
+.file-info-icons i.fa-tag:hover {
+  color: #4f46e5; /* Indigo */
+}
+
+.file-info-icons i.fa-trash-alt:hover {
+  color: #ef4444; /* Red */
+}
+
+/* 待压缩项样式 */
+#compress-pending-list li {
+  background-color: #eff6ff;
+  border-left: 3px solid #3b82f6;
+  transition: background-color 0.2s;
+}
+
+#compress-pending-list li:hover {
+  background-color: #dbeafe;
+}
+
+/* 成功压缩项样式 */
+#compress-success-list li {
+  border-left: 3px solid #10b981;
+}
+
+/* 压缩失败项样式 */
+#compress-failed-list li {
+  border-left: 3px solid #ef4444;
+}
+
+/* 确保与其他样式兼容 */
+.modal-overlay, .modal-container, .side-panel, .progress-container,
+.stats-container, .stat-item, .progress-bar, .progress-fill,
+.file-list, .tag, .btn, .side-panel-header, .side-panel-content {
+  /* 保持与importProgress.css中相同，CSS类选择器也需相同 */
+} 

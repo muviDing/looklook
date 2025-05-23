@@ -69,8 +69,10 @@ async function initializeApp() {
         
         // 先加载数据，再初始化视频列表区域
         await import('./videoData.js').then(async module => {
-            if (typeof module.loadVideoData === 'function') {
-                await module.loadVideoData();
+            // 初始化视图状态和数据库监听器
+            if (typeof module.initViewState === 'function') {
+                module.initViewState();
+                console.log('已初始化视图状态和数据库监听器');
             }
             
             // 应用排序

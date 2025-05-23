@@ -1185,4 +1185,30 @@
     font-style: italic;
 }
 
-/* 如果在页面中有其他样式，添加到这里 */ 
+/* 如果在页面中有其他样式，添加到这里 */
+
+/* 当前处理文件样式 */
+.current-file-container {
+  display: flex;
+  align-items: center;
+  margin-top: 8px;
+  padding: 4px 8px;
+  background-color: #f9fafb;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.current-file-label {
+  font-weight: 500;
+  color: #4b5563;
+  margin-right: 8px;
+}
+
+.current-file-name {
+  color: #2563eb;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 300px;
+} 

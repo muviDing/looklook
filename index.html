@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="css/detailDrawer.css">
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/moveProgress.css">
+    <link rel="stylesheet" href="css/compressProgress.css">
     <link rel="stylesheet" href="css/settings.css">
     <link rel="stylesheet" href="css/gridView.css">
     <style>
@@ -147,6 +148,10 @@
                         </span>
                     </div>
                     <div class="batch-buttons">
+                        <button class="batch-compress-btn px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded-md mr-2">
+                            <i class="fas fa-compress-alt mr-1"></i>
+                            压缩
+                        </button>
                         <button class="batch-move-btn px-3 py-1 bg-gray-100 hover:bg-gray-200 rounded-md mr-2">
                             <i class="fas fa-folder-open mr-1"></i>
                             迁移
@@ -559,5 +564,7 @@
     <script type="module" src="js/moveProgress.js"></script>
     <!-- 文件检查进度组件 -->
     <script type="module" src="js/fileCheckProgress.js"></script>
+    <!-- 压缩进度组件 -->
+    <script type="module" src="js/compressProgress.js"></script>
 </body>
 </html>

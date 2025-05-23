@@ -195,12 +195,28 @@ async function initEnumCache() {
             console.log(`已加载枚举值[${type}]: ${values.length}个`);
         }
         
-        // 确保合集中包含"路径异常"标签
         const collections = await getEnumValues('collection');
+        // 确保合集中包含"路径异常"标签
         if (!collections.includes('路径异常')) {
             console.log('添加默认标签: 路径异常');
             await addEnumValue('collection', '路径异常');
         }
+        // 确保合集中包含"压缩前"标签
+        if (!collections.includes('压缩前')) {
+            console.log('添加默认标签: 压缩前');
+            await addEnumValue('collection', '压缩前');
+        }
+        // 确保合集中包含"已压缩_高效感知无损"标签
+        if (!collections.includes('已压缩_高效感知无损')) {
+            console.log('添加默认标签: 已压缩_高效感知无损');
+            await addEnumValue('collection', '已压缩_高效感知无损');
+        }
+        // 确保合集中包含"已压缩_完全无损"标签
+        if (!collections.includes('已压缩_完全无损')) {
+            console.log('添加默认标签: 已压缩_完全无损');
+            await addEnumValue('collection', '已压缩_完全无损');
+        }
+        
     } catch (error) {
         console.error('初始化枚举值缓存失败:', error);
     }
@@ -356,6 +372,9 @@ function saveVideo(video) {
                 videoCache.push(newDoc);
             }
             
+            // 通知数据变更
+            notifyDataChange();
+            
             resolve(newDoc);
         });
     });
@@ -439,6 +458,9 @@ function updateVideo(video) {
                     videoCache[index] = updatedDoc;
                 }
                 
+                // 通知数据变更
+                notifyDataChange();
+                
                 resolve(updatedDoc);
             });
         });
@@ -462,6 +484,9 @@ function deleteVideo(videoId) {
             // 更新缓存
             videoCache = videoCache.filter(v => v.id !== videoId);
             
+            // 通知数据变更
+            notifyDataChange();
+            
             resolve(numRemoved);
         });
     });
@@ -483,6 +508,9 @@ function deleteVideos(videoIds) {
             
             // 更新缓存
             videoCache = videoCache.filter(v => !videoIds.includes(v.id));
+            
+            // 通知数据变更
+            notifyDataChange();
             
             resolve(numRemoved);
         });
@@ -707,6 +735,52 @@ function checkAllVideoFilesExist() {
     });
 }
 
+/**
+ * 根据ID获取视频
+ * @param {string|number} id 视频ID
+ * @returns {Promise<Object|null>} 视频对象或null
+ */
+function getVideoById(id) {
+  return new Promise((resolve, reject) => {
+    // 先从缓存中查找
+    const cachedVideo = videoCache.find(v => v.id == id);
+    if (cachedVideo) {
+      resolve(cachedVideo);
+      return;
+    }
+    
+    // 从数据库中查找
+    db.findOne({ id: id }, (err, video) => {
+      if (err) {
+        console.error(`查询视频ID[${id}]失败:`, err);
+        reject(err);
+        return;
+      }
+      
+      resolve(video || null);
+    });
+  });
+}
+
+/**
+ * 数据库变更后通知渲染进程
+ */
+function notifyDataChange() {
+  try {
+    // 在主进程中
+    if (process.type !== 'renderer') {
+      const { BrowserWindow } = require('electron');
+      const mainWindow = BrowserWindow.getAllWindows()[0];
+      if (mainWindow) {
+        console.log('通知渲染进程数据已更新');
+        mainWindow.webContents.send('db-data-changed');
+      }
+    }
+  } catch (error) {
+    console.error('通知数据变更失败:', error);
+  }
+}
+
 // 导出模块
 module.exports = {
     initDatabase,
@@ -723,5 +797,6 @@ module.exports = {
     saveEnumValues,
     addEnumValue,
     updateVideoFilePath,
-    getFileCheckStatus: () => ({ ...fileCheckStatus }) // 导出文件检查状态的副本
+    getFileCheckStatus: () => ({ ...fileCheckStatus }),
+    getVideoById
 };

@@ -50,6 +50,23 @@ contextBridge.exposeInMainWorld('electronAPI', {
     };
   },
   
+  // 视频压缩相关
+  compressVideos: (videos, options) => ipcRenderer.invoke('compress-videos', videos, options),
+  pauseCompression: () => ipcRenderer.send('pause-compression'),
+  resumeCompression: () => ipcRenderer.send('resume-compression'),
+  resumeCompressionWithOptions: (options) => ipcRenderer.send('resume-compression-with-options', options),
+  cancelCompression: () => ipcRenderer.send('cancel-compression'),
+  onCompressionProgress: (callback) => {
+    const progressListener = (event, progress) => {
+      callback(progress);
+    };
+    ipcRenderer.on('compression-progress', progressListener);
+    return () => {
+      ipcRenderer.removeListener('compression-progress', progressListener);
+    };
+  },
+  checkGpuSupport: () => ipcRenderer.invoke('check-gpu-support'),
+  
   // 数据库操作
   saveVideo: (video) => ipcRenderer.invoke('save-video', video),
   saveVideos: (videos) => ipcRenderer.invoke('save-videos', videos),
@@ -83,6 +100,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.on('file-check-progress', progressListener);
     return () => {
       ipcRenderer.removeListener('file-check-progress', progressListener);
+    };
+  },
+  
+  // 数据库变更事件
+  onDbDataChanged: (callback) => {
+    const changeListener = (event) => {
+      callback();
+    };
+    ipcRenderer.on('db-data-changed', changeListener);
+    return () => {
+      ipcRenderer.removeListener('db-data-changed', changeListener);
     };
   },
 });

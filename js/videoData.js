@@ -891,7 +891,9 @@ async function playVideo(filePath) {
     }
 }
 
-// 初始化视图状态
+/**
+ * 初始化视图状态
+ */
 function initViewState() {
     // 更新分页
     updatePagination();
@@ -915,6 +917,55 @@ function initViewState() {
     // 更新选中计数和批量操作按钮状态
     updateSelectedCount();
     updateBatchActionsVisibility();
+    
+    // 监听数据库变更事件，自动更新界面
+    // 仅在初始化时添加一次监听器
+    if (!window.dbChangeListenerAdded) {
+        window.dbChangeListenerAdded = true;
+        window.electronAPI.onDbDataChanged(() => {
+            console.log('接收到数据库变更通知，正在刷新数据');
+            // 重新获取数据并刷新视图
+            refreshVideoData();
+        });
+    }
+}
+
+/**
+ * 刷新视频数据并更新UI
+ */
+async function refreshVideoData() {
+    try {
+        // 从数据库获取最新数据
+        const freshData = await window.electronAPI.getVideos();
+        
+        // 更新本地缓存，保持数组引用不变
+        videoData.length = 0; // 清空现有数据
+        videoData.push(...freshData); // 添加新数据
+        
+        console.log(`数据库刷新完成，共获取 ${videoData.length} 个视频`);
+        
+        // 清除筛选状态，确保显示最新的完整数据
+        textFilteredData = null;
+        conditionFilteredData = null;
+        filteredData = null;
+        sortedData = null;
+        
+        // 应用当前的排序设置
+        sortAllData();
+        
+        // 更新视图状态
+        initViewState();
+        
+        // 更新总视频计数显示
+        const totalCountElement = document.getElementById('total-count');
+        if (totalCountElement) {
+            totalCountElement.textContent = videoData.length;
+        }
+        
+        console.log('UI刷新完成');
+    } catch (error) {
+        console.error('刷新视频数据失败:', error);
+    }
 }
 
 // 当视频数据变化时更新视图状态
