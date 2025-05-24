@@ -2772,8 +2772,39 @@ function registerIpcHandlers() {
       successList: [],
       failedList: [],
       pendingList,
-      isCompleted: false
+      isCompleted: false,
+      currentFile: null
     });
+    
+    // 生成唯一文件名的辅助函数
+    function generateUniqueFileName(targetDir, originalName) {
+      const ext = path.extname(originalName);
+      const baseName = path.basename(originalName, ext);
+      let counter = 1;
+      let newName = originalName;
+      
+      while (fs.existsSync(path.join(targetDir, newName))) {
+        newName = `${baseName}(${counter})${ext}`;
+        counter++;
+      }
+      
+      return {
+        fileName: newName,
+        isRenamed: newName !== originalName,
+        suffix: newName !== originalName ? `(${counter-1})` : null
+      };
+    }
+    
+    // 检测是否为同一分区的辅助函数
+    function isSameDrive(sourcePath, targetPath) {
+      try {
+        const sourceDrive = path.parse(sourcePath).root;
+        const targetDrive = path.parse(targetPath).root;
+        return sourceDrive.toLowerCase() === targetDrive.toLowerCase();
+      } catch (error) {
+        return false;
+      }
+    }
     
     // 逐个处理视频
     for (const video of videos) {
@@ -2802,8 +2833,19 @@ function registerIpcHandlers() {
       
       try {
         const sourceFilePath = video.filePath;
-        const fileName = path.basename(sourceFilePath);
-        const targetFilePath = path.join(targetFolder, fileName);
+        const originalFileName = path.basename(sourceFilePath);
+        
+        // 生成唯一文件名
+        const { fileName: uniqueFileName, isRenamed, suffix } = generateUniqueFileName(targetFolder, originalFileName);
+        const targetFilePath = path.join(targetFolder, uniqueFileName);
+        
+        // 更新当前处理文件信息
+        mainWindow.webContents.send('move-progress', {
+          currentFile: {
+            name: originalFileName,
+            progress: 0
+          }
+        });
         
         // 更新待处理列表
         const pendingIndex = pendingList.findIndex(item => item.id === video.id);
@@ -2812,33 +2854,83 @@ function registerIpcHandlers() {
         }
         pending--;
         
-        // 检查目标文件是否已存在
-        if (fs.existsSync(targetFilePath)) {
-          throw new Error('目标文件已存在');
+        let moveSuccess = false;
+        let usedRename = false;
+        
+        // 策略1: 尝试使用fs.rename()进行快速移动（同分区）
+        if (isSameDrive(sourceFilePath, targetFilePath)) {
+          try {
+            await fs.promises.rename(sourceFilePath, targetFilePath);
+            moveSuccess = true;
+            usedRename = true;
+            console.log(`使用快速移动: ${originalFileName} -> ${uniqueFileName}`);
+          } catch (renameError) {
+            console.log(`快速移动失败，降级到复制模式: ${renameError.message}`);
+          }
         }
         
-        // 复制文件
-        await fs.promises.copyFile(sourceFilePath, targetFilePath);
-        
-        // 检查复制是否成功
-        if (fs.existsSync(targetFilePath)) {
-          // 删除原文件
-          await fs.promises.unlink(sourceFilePath);
+        // 策略2: 降级到复制-删除模式
+        if (!moveSuccess) {
+          // 更新进度：开始复制
+          mainWindow.webContents.send('move-progress', {
+            currentFile: {
+              name: originalFileName,
+              progress: 25
+            }
+          });
           
-          // 更新数据库记录
+          // 复制文件
+          await fs.promises.copyFile(sourceFilePath, targetFilePath);
+          
+          // 更新进度：复制完成
+          mainWindow.webContents.send('move-progress', {
+            currentFile: {
+              name: originalFileName,
+              progress: 75
+            }
+          });
+          
+          // 检查复制是否成功
+          if (fs.existsSync(targetFilePath)) {
+            // 删除原文件
+            await fs.promises.unlink(sourceFilePath);
+            moveSuccess = true;
+            console.log(`使用复制-删除模式: ${originalFileName} -> ${uniqueFileName}`);
+          } else {
+            throw new Error('文件复制失败');
+          }
+        }
+        
+        if (moveSuccess) {
+          // 更新数据库记录（更新文件路径和文件名）
           await db.updateVideoFilePath(video.id, targetFilePath);
           
           // 添加到成功列表
-          successList.push({
+          const successItem = {
             id: video.id,
             fileName: video.fileName,
             filePath: sourceFilePath,
-            newPath: targetFilePath
-          });
+            newPath: targetFilePath,
+            newFileName: uniqueFileName
+          };
           
+          // 如果文件被重命名，添加重命名信息
+          if (isRenamed) {
+            successItem.isRenamed = true;
+            successItem.originalName = originalFileName;
+            successItem.suffix = suffix;
+          }
+          
+          successList.push(successItem);
           success++;
-        } else {
-          throw new Error('文件复制失败');
+          
+          // 更新进度：完成
+          mainWindow.webContents.send('move-progress', {
+            currentFile: {
+              name: originalFileName,
+              progress: 100
+            }
+          });
         }
       } catch (error) {
         console.error(`移动视频失败: ${video.fileName}, 错误: ${error.message}`);
@@ -2854,7 +2946,7 @@ function registerIpcHandlers() {
         failed++;
       }
       
-      // 更新进度
+      // 更新总体进度
       processed++;
       const percent = Math.round((processed / total) * 100);
       
@@ -2870,7 +2962,8 @@ function registerIpcHandlers() {
         successList,
         failedList,
         pendingList,
-        isCompleted: processed === total
+        isCompleted: processed === total,
+        currentFile: null // 清除当前文件信息
       });
       
       // 短暂暂停，避免UI卡顿
@@ -4057,16 +4150,44 @@ async function processNextCompressionTask(options, stats) {
         const currentTime = hours * 3600 + minutes * 60 + seconds;
         const progress = Math.round((currentTime / duration) * 100);
         
+        // 提取速度信息
+        let speed = null;
+        const speedMatch = output.match(/speed=\s*([0-9.]+)x/);
+        if (speedMatch) {
+          speed = parseFloat(speedMatch[1]).toFixed(1);
+        }
+        
+        // 计算预估剩余时间
+        let eta = null;
+        if (speed && speed > 0 && progress > 0 && progress < 100) {
+          const remainingTime = (duration - currentTime) / parseFloat(speed);
+          if (remainingTime > 0) {
+            //5分钟以内显示秒，5分钟以上显示分钟
+            if (remainingTime <= 300) {
+              const etaSeconds = Math.floor(remainingTime);
+              eta = `${etaSeconds}秒`;
+            } else {
+              const etaMinutes = Math.floor(remainingTime / 60);
+              eta = `${etaMinutes}分钟`;
+            }
+          }
+        }
+        
         // 限制更新频率（每200ms更新一次）
         const now = Date.now();
         if (now - lastProgressUpdate >= 200) {
           lastProgressUpdate = now;
           
-          // 发送进度更新
+          // 发送进度更新，包含单个文件进度信息
           mainWindow.webContents.send('compression-progress', {
             ...stats,
             currentFile: video.fileName,
             currentProgress: progress,
+            currentFileProgress: {
+              percent: progress,
+              speed: speed,
+              eta: eta
+            },
             pendingList: stats.pendingList,
             pending: stats.pending,
             percent: Math.round((stats.processed / stats.total) * 100)

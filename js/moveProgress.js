@@ -28,12 +28,32 @@ function createMoveProgressModal() {
           <div id="move-target-folder-path" class="target-folder-path">等待选择...</div>
         </div>
         
+        <!-- 跨分区提醒区域 -->
+        <div class="cross-partition-warning" id="move-cross-partition-warning" style="display: none;">
+          <i class="fas fa-info-circle"></i>
+          <span>检测到跨分区迁移，将采用复制-删除方式确保文件安全，耗时将增加</span>
+        </div>
+        
+        <!-- 当前处理文件显示区域 -->
+        <div class="current-file-container" id="move-current-file-container" style="display: none;">
+          <div class="current-file-info">
+            <div class="current-file-label">正在处理：</div>
+            <div class="current-file-name" id="move-current-file-name">-</div>
+          </div>
+          <div class="current-file-stats" id="move-current-file-progress" style="display: none;">
+            <div class="stat-item">
+              <span class="stat-label">进度</span>
+              <span class="stat-value" id="move-current-file-percent">0%</span>
+            </div>
+          </div>
+        </div>
+        
         <div class="progress-container">
           <div class="progress-bar">
             <div class="progress-fill" id="move-progress-fill" style="width: 0%"></div>
           </div>
           <div class="progress-text">
-            <span>进度：<span id="move-progress-percent">0</span>%</span>
+            <span>总进度：<span id="move-progress-percent">0</span>%</span>
             <span><span id="move-progress-processed">0</span>/<span id="move-progress-total">0</span></span>
           </div>
         </div>
@@ -273,10 +293,32 @@ function updateProgress(progress) {
   const closeBtn = document.getElementById('move-close-btn');
   const targetFolderPath = document.getElementById('move-target-folder-path');
   
+  // 当前文件进度相关元素
+  const currentFileContainer = document.getElementById('move-current-file-container');
+  const currentFileName = document.getElementById('move-current-file-name');
+  const currentFileProgress = document.getElementById('move-current-file-progress');
+  const currentFilePercent = document.getElementById('move-current-file-percent');
+  
   // 更新目标文件夹路径
   if (progress.targetFolder) {
     targetFolderPath.textContent = progress.targetFolder;
     targetFolderPath.title = progress.targetFolder;
+  }
+  
+  // 处理当前文件进度显示
+  if (progress.currentFile) {
+    currentFileContainer.style.display = 'block';
+    currentFileName.textContent = progress.currentFile.name;
+    
+    // 显示进度统计
+    if (progress.currentFile.progress > 0) {
+      currentFileProgress.style.display = 'flex';
+      currentFilePercent.textContent = `${progress.currentFile.progress}%`;
+    } else {
+      currentFileProgress.style.display = 'none';
+    }
+  } else {
+    currentFileContainer.style.display = 'none';
   }
   
   // 处理暂停迁移的情况
@@ -319,7 +361,22 @@ function updateProgress(progress) {
   if (progress.successList && progress.successList.length > 0) {
     progress.successList.forEach(item => {
       const li = document.createElement('li');
-      li.textContent = item.fileName || item.filePath.split('/').pop().split('\\').pop();
+      
+      // 显示文件名，如果有重命名则显示重命名信息
+      let displayText = item.fileName || item.filePath.split('/').pop().split('\\').pop();
+      if (item.isRenamed) {
+        displayText += ` → ${item.newFileName}`;
+        
+        // 添加重命名标签
+        const renameTag = document.createElement('span');
+        renameTag.className = 'tag rename-tag';
+        renameTag.textContent = '存在同名文件，已自动重命名';
+        renameTag.title = `原名: ${item.originalName}, 新名: ${item.newFileName}`;
+        li.appendChild(document.createTextNode(displayText + ' '));
+        li.appendChild(renameTag);
+      } else {
+        li.textContent = displayText;
+      }
       
       // 添加目标路径为提示
       if (item.newPath) {
@@ -364,6 +421,9 @@ function updateProgress(progress) {
     pauseBtn.disabled = true;
     closeBtn.disabled = false;
     
+    // 隐藏当前文件进度
+    currentFileContainer.style.display = 'none';
+    
     // 在进度条下方显示完成状态
     const statusText = document.createElement('div');
     statusText.textContent = '迁移完成';
@@ -392,6 +452,34 @@ async function startMoveVideos(selectedVideos, targetFolder) {
   try {
     // 显示迁移进度弹窗
     showMoveProgressModal();
+    
+    // 更新目标文件夹显示
+    const targetFolderElement = document.getElementById('move-target-folder-path');
+    if (targetFolderElement) {
+      targetFolderElement.textContent = targetFolder;
+    }
+    
+    // 检测是否存在跨分区迁移
+    let hasCrossPartition = false;
+    const targetDrive = targetFolder.charAt(0).toUpperCase(); // 获取目标分区盘符
+    
+    for (const video of selectedVideos) {
+      const sourceDrive = video.filePath.charAt(0).toUpperCase(); // 获取源文件分区盘符
+      if (sourceDrive !== targetDrive) {
+        hasCrossPartition = true;
+        break;
+      }
+    }
+    
+    // 显示或隐藏跨分区提醒
+    const warningElement = document.getElementById('move-cross-partition-warning');
+    if (warningElement) {
+      if (hasCrossPartition) {
+        warningElement.style.display = 'block';
+      } else {
+        warningElement.style.display = 'none';
+      }
+    }
     
     // 调用主进程方法迁移视频
     const result = await window.electronAPI.moveVideos(selectedVideos, targetFolder);

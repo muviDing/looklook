@@ -94,8 +94,24 @@ function createCompressProgressModal() {
           </div>
           <!-- 当前处理文件 -->
           <div class="current-file-container">
-            <div class="current-file-label">当前处理：</div>
-            <div class="current-file-name" id="compress-current-file">-</div>
+            <div class="current-file-info">
+              <div class="current-file-label">当前处理：</div>
+              <div class="current-file-name" id="compress-current-file">-</div>
+            </div>
+            <div class="current-file-stats" id="compress-current-file-progress" style="display: none;">
+              <div class="stat-item">
+                <span class="stat-label">进度</span>
+                <span class="stat-value" id="compress-current-percent">0%</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">速度</span>
+                <span class="stat-value" id="compress-current-speed">-</span>
+              </div>
+              <div class="stat-item">
+                <span class="stat-label">剩余时间</span>
+                <span class="stat-value" id="compress-current-eta">-</span>
+              </div>
+            </div>
           </div>
         </div>
         
@@ -494,6 +510,12 @@ function updateCompressionProgress(progress) {
   const savedSpaceEl = document.getElementById('compress-saved-space').querySelector('span');
   const currentFile = document.getElementById('compress-current-file');
   
+  // 当前文件进度相关元素
+  const currentFileProgress = document.getElementById('compress-current-file-progress');
+  const currentPercent = document.getElementById('compress-current-percent');
+  const currentSpeed = document.getElementById('compress-current-speed');
+  const currentEta = document.getElementById('compress-current-eta');
+  
   // 更新进度条
   progressFill.style.width = `${progress.percent}%`;
   progressPercent.textContent = progress.percent;
@@ -509,6 +531,28 @@ function updateCompressionProgress(progress) {
     savedSpaceEl.textContent = `${progress.totalSavedSpace}MB`;
   }
   
+  // 处理当前文件进度显示
+  if (progress.currentFileProgress) {
+    currentFileProgress.style.display = 'flex';
+    currentPercent.textContent = `${progress.currentFileProgress.percent}%`;
+    
+    // 显示速度信息
+    if (progress.currentFileProgress.speed) {
+      currentSpeed.textContent = `${progress.currentFileProgress.speed}x`;
+    } else {
+      currentSpeed.textContent = '-';
+    }
+    
+    // 显示预估时间
+    if (progress.currentFileProgress.eta) {
+      currentEta.textContent = progress.currentFileProgress.eta;
+    } else {
+      currentEta.textContent = '-';
+    }
+  } else {
+    currentFileProgress.style.display = 'none';
+  }
+  
   // 处理暂停/继续状态
   if (progress.paused !== undefined) {
     if (progress.paused) {
@@ -516,6 +560,7 @@ function updateCompressionProgress(progress) {
       closeBtn.disabled = false;
       // 暂停时清空当前处理文件显示
       currentFile.textContent = '-';
+      currentFileProgress.style.display = 'none';
     } else {
       pauseBtn.textContent = '暂停';
       closeBtn.disabled = true;
@@ -608,6 +653,7 @@ function updateCompressionProgress(progress) {
     pauseBtn.style.display = 'none';
     // 完成时清空当前处理文件显示
     currentFile.textContent = '-';
+    currentFileProgress.style.display = 'none';
   }
   
   // 更新当前处理文件

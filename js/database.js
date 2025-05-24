@@ -540,14 +540,15 @@ function updateVideoViewInfo(filePath) {
 }
 
 /**
- * 更新视频文件路径
+ * 更新视频文件路径和文件名
  * @param {string} id 视频ID
  * @param {string} newFilePath 新的文件路径
  * @returns {Promise<boolean>} 操作是否成功
  */
 async function updateVideoFilePath(id, newFilePath) {
   try {
-    console.log(`更新视频ID: ${id} 的文件路径为: ${newFilePath}`);
+    const newFileName = path.basename(newFilePath);
+    console.log(`更新视频ID: ${id} 的文件路径为: ${newFilePath}, 文件名为: ${newFileName}`);
     
     // 查找并更新视频
     const video = videoCache.find(v => v.id === id);
@@ -556,29 +557,30 @@ async function updateVideoFilePath(id, newFilePath) {
       return false;
     }
     
-    // 更新缓存中的路径
+    // 更新缓存中的路径和文件名
     video.filePath = newFilePath;
+    video.fileName = newFileName;
     
     // 更新数据库中的记录
     return new Promise((resolve, reject) => {
       db.update(
         { id: id },
-        { $set: { filePath: newFilePath } },
+        { $set: { filePath: newFilePath, fileName: newFileName } },
         {},
         (err, numReplaced) => {
           if (err) {
-            console.error('更新视频文件路径失败:', err);
+            console.error('更新视频文件路径和文件名失败:', err);
             reject(err);
             return;
           }
           
-          console.log(`成功更新 ${numReplaced} 条视频记录的文件路径`);
+          console.log(`成功更新 ${numReplaced} 条视频记录的文件路径和文件名`);
           resolve(numReplaced > 0);
         }
       );
     });
   } catch (error) {
-    console.error('更新视频文件路径失败:', error);
+    console.error('更新视频文件路径和文件名失败:', error);
     throw error;
   }
 }
