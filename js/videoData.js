@@ -874,7 +874,7 @@ async function playVideo(filePath) {
         
         // 更新本地数据
         videoData[videoIndex].viewCount += 1;
-        videoData[videoIndex].lastViewDate = new Date().toISOString().split('T')[0];
+        videoData[videoIndex].lastViewDate = new Date().toISOString();
         
         // 如果标签被更新，或者视频被成功播放，重新渲染视图
         if (tagUpdated || result.success) {

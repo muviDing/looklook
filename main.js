@@ -2835,6 +2835,12 @@ function registerIpcHandlers() {
         const sourceFilePath = video.filePath;
         const originalFileName = path.basename(sourceFilePath);
         
+        // 检查目标文件夹和当前文件所在文件夹是否相同
+        const currentDir = path.dirname(sourceFilePath);
+        const normalizedCurrentDir = path.resolve(currentDir);
+        const normalizedTargetDir = path.resolve(targetFolder);
+        const isSameDirectory = normalizedCurrentDir === normalizedTargetDir;
+        
         // 生成唯一文件名
         const { fileName: uniqueFileName, isRenamed, suffix } = generateUniqueFileName(targetFolder, originalFileName);
         const targetFilePath = path.join(targetFolder, uniqueFileName);
@@ -2857,65 +2863,89 @@ function registerIpcHandlers() {
         let moveSuccess = false;
         let usedRename = false;
         
-        // 策略1: 尝试使用fs.rename()进行快速移动（同分区）
-        if (isSameDrive(sourceFilePath, targetFilePath)) {
-          try {
-            await fs.promises.rename(sourceFilePath, targetFilePath);
-            moveSuccess = true;
-            usedRename = true;
-            console.log(`使用快速移动: ${originalFileName} -> ${uniqueFileName}`);
-          } catch (renameError) {
-            console.log(`快速移动失败，降级到复制模式: ${renameError.message}`);
+        // 如果目标文件夹和当前文件夹相同，直接视为成功，跳过物理移动
+        if (isSameDirectory) {
+          console.log(`文件已在目标文件夹中，跳过移动: ${originalFileName}`);
+          moveSuccess = true;
+          
+          // 更新进度：直接完成
+          mainWindow.webContents.send('move-progress', {
+            currentFile: {
+              name: originalFileName,
+              progress: 100
+            }
+          });
+        } else {
+          // 策略1: 尝试使用fs.rename()进行快速移动（同分区）
+          if (isSameDrive(sourceFilePath, targetFilePath)) {
+            try {
+              await fs.promises.rename(sourceFilePath, targetFilePath);
+              moveSuccess = true;
+              usedRename = true;
+              console.log(`使用快速移动: ${originalFileName} -> ${uniqueFileName}`);
+            } catch (renameError) {
+              console.log(`快速移动失败，降级到复制模式: ${renameError.message}`);
+            }
           }
-        }
-        
-        // 策略2: 降级到复制-删除模式
-        if (!moveSuccess) {
-          // 更新进度：开始复制
-          mainWindow.webContents.send('move-progress', {
-            currentFile: {
-              name: originalFileName,
-              progress: 25
+          
+          // 策略2: 降级到复制-删除模式
+          if (!moveSuccess) {
+            // 更新进度：开始复制
+            mainWindow.webContents.send('move-progress', {
+              currentFile: {
+                name: originalFileName,
+                progress: 25
+              }
+            });
+            
+            // 复制文件
+            await fs.promises.copyFile(sourceFilePath, targetFilePath);
+            
+            // 更新进度：复制完成
+            mainWindow.webContents.send('move-progress', {
+              currentFile: {
+                name: originalFileName,
+                progress: 75
+              }
+            });
+            
+            // 检查复制是否成功
+            if (fs.existsSync(targetFilePath)) {
+              // 删除原文件
+              await fs.promises.unlink(sourceFilePath);
+              moveSuccess = true;
+              console.log(`使用复制-删除模式: ${originalFileName} -> ${uniqueFileName}`);
+            } else {
+              throw new Error('文件复制失败');
             }
-          });
-          
-          // 复制文件
-          await fs.promises.copyFile(sourceFilePath, targetFilePath);
-          
-          // 更新进度：复制完成
-          mainWindow.webContents.send('move-progress', {
-            currentFile: {
-              name: originalFileName,
-              progress: 75
-            }
-          });
-          
-          // 检查复制是否成功
-          if (fs.existsSync(targetFilePath)) {
-            // 删除原文件
-            await fs.promises.unlink(sourceFilePath);
-            moveSuccess = true;
-            console.log(`使用复制-删除模式: ${originalFileName} -> ${uniqueFileName}`);
-          } else {
-            throw new Error('文件复制失败');
+            
+            // 更新进度：完成
+            mainWindow.webContents.send('move-progress', {
+              currentFile: {
+                name: originalFileName,
+                progress: 100
+              }
+            });
           }
         }
         
         if (moveSuccess) {
-          // 更新数据库记录（更新文件路径和文件名）
-          await db.updateVideoFilePath(video.id, targetFilePath);
+          // 只有在实际移动了文件时才更新数据库记录
+          if (!isSameDirectory) {
+            await db.updateVideoFilePath(video.id, targetFilePath);
+          }
           
           // 添加到成功列表
           const successItem = {
             id: video.id,
             fileName: video.fileName,
             filePath: sourceFilePath,
-            newPath: targetFilePath,
-            newFileName: uniqueFileName
+            newPath: isSameDirectory ? sourceFilePath : targetFilePath,
+            newFileName: isSameDirectory ? originalFileName : uniqueFileName
           };
           
           // 如果文件被重命名，添加重命名信息
-          if (isRenamed) {
+          if (isRenamed && !isSameDirectory) {
             successItem.isRenamed = true;
             successItem.originalName = originalFileName;
             successItem.suffix = suffix;
@@ -2923,14 +2953,6 @@ function registerIpcHandlers() {
           
           successList.push(successItem);
           success++;
-          
-          // 更新进度：完成
-          mainWindow.webContents.send('move-progress', {
-            currentFile: {
-              name: originalFileName,
-              progress: 100
-            }
-          });
         }
       } catch (error) {
         console.error(`移动视频失败: ${video.fileName}, 错误: ${error.message}`);
@@ -4426,6 +4448,19 @@ async function processNextCompressionTask(options, stats) {
         newDuration = originalVideoFull.duration;
       }
       
+      // 获取新文件的创建时间
+      let newCreateDate = '';
+      try {
+        const newFileStats = fs.statSync(finalOutputPath);
+        newCreateDate = new Date(newFileStats.birthtime).toISOString();
+        logToFile(`[COMPRESS] 获取新视频创建时间: ${newCreateDate}`);
+      } catch (error) {
+        console.error('获取新视频创建时间失败:', error);
+        logToFile(`[COMPRESS] 获取新视频创建时间失败: ${error.message}`);
+        // 使用当前时间作为后备
+        newCreateDate = new Date().toISOString();
+      }
+      
       // 创建新视频记录 - 只继承特定字段，其他字段基于新文件重新生成
       const compressedVideo = {
         // 新生成的属性
@@ -4434,6 +4469,7 @@ async function processNextCompressionTask(options, stats) {
         fileName: finalOutputName,
         fileSize: formatFileSize(compressedSize),
         thumbnailUrl: newThumbnailUrl || originalVideoFull.thumbnailUrl, // 如果复制失败则使用原缩略图
+        createDate: newCreateDate,     // 新文件的创建时间
         importDate: new Date().toISOString(),
         resolution: newResolution,
         duration: newDuration,
@@ -4649,12 +4685,15 @@ function buildCompressCommand(inputPath, outputPath, mode, useGpu, formatInfo = 
       // 使用GPU加速 (NVIDIA)
       args.push(
         '-c:v', 'hevc_nvenc',
-        '-preset', 'p4',
+        '-preset', 'p2',           // 更快预设，提高编码效率
         '-profile:v', 'main',
-        '-rc:v', 'vbr',
-        '-qmin', '0',
-        '-qmax', '28',
-        '-b:v', '0'
+        '-rc:v', 'constqp',        // 恒定量化模式，对应CPU的CRF
+        '-qp', '28',               // 直接对应CPU的CRF 28
+        '-spatial_aq', '1',        // 空间自适应量化
+        '-temporal_aq', '1',       // 时间自适应量化
+        '-rc-lookahead', '32',     // 增加前瞻帧数
+        '-bf', '3',                // B帧数量
+        '-refs', '3'               // 参考帧数量
       );
     } else {
       // 使用CPU

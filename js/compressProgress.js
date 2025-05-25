@@ -61,7 +61,7 @@ function createCompressProgressModal() {
             </div>
           </div>
           <div class="option-item">
-            <input type="checkbox" id="auto-delete">
+            <input type="checkbox" id="auto-delete" checked>
             <label for="auto-delete">压缩成功时自动删除原文件</label>
             <div class="tooltip-wrapper">
               <i class="fas fa-question-circle info-icon"></i>
@@ -69,7 +69,7 @@ function createCompressProgressModal() {
             </div>
           </div>
           <div class="option-item">
-            <input type="checkbox" id="use-gpu">
+            <input type="checkbox" id="use-gpu" checked>
             <label for="use-gpu">启用GPU加速</label>
             <div class="tooltip-wrapper">
               <i class="fas fa-question-circle info-icon"></i>

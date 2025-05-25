@@ -532,7 +532,7 @@ function updateVideoViewInfo(filePath) {
         
         // 更新观看次数和最后观看时间
         video.viewCount = (video.viewCount || 0) + 1;
-        video.lastViewDate = new Date().toISOString().split('T')[0];
+        video.lastViewDate = new Date().toISOString();
         
         // 保存到数据库
         updateVideo(video).then(resolve).catch(reject);
