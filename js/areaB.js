@@ -20,6 +20,9 @@ let actorsMultiSelect = null;
 let selectedCollections = [];
 let selectedActors = [];
 
+// 搜索模式状态
+let searchMode = 'include'; // 'include' 或 'exclude'
+
 // 初始化搜索和筛选功能
 function initSearchFilter() {
     // 首先从视频数据中提取数据源
@@ -27,14 +30,29 @@ function initSearchFilter() {
     
     // 搜索框事件
     const searchInput = document.querySelector('.search-input');
-    if (searchInput) {
-    searchInput.addEventListener('input', function() {
-        // 实现搜索功能
-        const searchTerm = this.value.toLowerCase();
-        filterVideos(searchTerm);
-    });
+    const searchIcon = document.querySelector('.search-box i');
+    
+    if (searchInput && searchIcon) {
+        // 初始化搜索图标
+        updateSearchIcon();
+        
+        // 搜索输入事件
+        searchInput.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            filterVideos(searchTerm);
+        });
+        
+        // 搜索图标点击事件
+        searchIcon.addEventListener('click', function() {
+            toggleSearchMode();
+        });
+        
+        // 搜索图标悬停样式
+        searchIcon.style.cursor = 'pointer';
+        searchIcon.style.transition = 'color 0.2s ease';
+        
     } else {
-        console.error('找不到搜索输入框元素');
+        console.error('找不到搜索输入框或搜索图标元素');
     }
     
     // 筛选按钮事件
@@ -56,6 +74,36 @@ function initSearchFilter() {
     
     // 添加筛选气泡刷新事件监听
     document.addEventListener('filter-bubbles-refresh', handleFilterBubblesRefresh);
+}
+
+// 切换搜索模式
+function toggleSearchMode() {
+    searchMode = searchMode === 'include' ? 'exclude' : 'include';
+    updateSearchIcon();
+    
+    // 如果当前有搜索词，重新执行搜索
+    const searchInput = document.querySelector('.search-input');
+    if (searchInput && searchInput.value.trim()) {
+        filterVideos(searchInput.value.toLowerCase());
+    }
+}
+
+// 更新搜索图标和提示语
+function updateSearchIcon() {
+    const searchIcon = document.querySelector('.search-box i');
+    const searchInput = document.querySelector('.search-input');
+    
+    if (searchIcon && searchInput) {
+        if (searchMode === 'include') {
+            searchIcon.className = 'fas fa-search';
+            searchIcon.title = '点击切换为排除模式';
+            searchInput.placeholder = '搜索包含内容的视频（点击左侧图标切换模式）';
+        } else {
+            searchIcon.className = 'fas fa-ban';
+            searchIcon.title = '点击切换为包含模式';
+            searchInput.placeholder = '搜索不包含内容的视频（点击左侧图标切换模式）';
+        }
+    }
 }
 
 // 处理筛选气泡刷新事件
@@ -722,8 +770,8 @@ function filterVideos(searchTerm) {
     
     // 过滤视频数据
     const filteredVideos = videos.filter(video => {
-        // 在指定字段中搜索 - 使用模糊匹配（包含子字符串）
-        return (
+        // 检查视频是否匹配搜索词的函数
+        const matchesSearchTerm = (
             // 文件名 - 模糊匹配
             (video.fileName && video.fileName.toLowerCase().includes(searchTerm)) ||
             
@@ -754,6 +802,15 @@ function filterVideos(searchTerm) {
             // 文件路径 - 模糊匹配
             (video.filePath && video.filePath.toLowerCase().includes(searchTerm))
         );
+        
+        // 根据搜索模式返回结果
+        if (searchMode === 'include') {
+            // 包含模式：返回匹配的视频
+            return matchesSearchTerm;
+        } else {
+            // 排除模式：返回不匹配的视频
+            return !matchesSearchTerm;
+        }
     });
     
     // 使用新的API更新文本筛选结果

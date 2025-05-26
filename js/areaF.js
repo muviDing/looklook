@@ -697,7 +697,7 @@ async function regeneratePreviewImage() {
             
             // 显示成功提示
             const { showCustomAlert } = await import('./areaC.js');
-            showCustomAlert('预览图重新生成成功', 'success');
+            // showCustomAlert('预览图重新生成成功', 'success');
             
             // 重新设置取消编辑按钮事件
             setupCancelEditButton();

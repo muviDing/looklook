@@ -92,6 +92,20 @@ body {
     top: 50%;
     transform: translateY(-50%);
     color: #9ca3af;
+    cursor: pointer;
+    transition: color 0.2s ease;
+    padding: 4px;
+    border-radius: 4px;
+}
+
+.search-box i:hover {
+    color: #4f46e5;
+    background-color: rgba(79, 70, 229, 0.1);
+}
+
+.search-box i:active {
+    color: #3730a3;
+    background-color: rgba(79, 70, 229, 0.2);
 }
 
 /* 区域C: 功能按钮 */

@@ -956,11 +956,8 @@ async function refreshVideoData() {
         // 更新视图状态
         initViewState();
         
-        // 更新总视频计数显示
-        const totalCountElement = document.getElementById('total-count');
-        if (totalCountElement) {
-            totalCountElement.textContent = videoData.length;
-        }
+        // 更新页脚数量统计
+        updateFooterCount();
         
         console.log('UI刷新完成');
     } catch (error) {
@@ -982,11 +979,8 @@ function onVideoDataChanged() {
     // 更新视图状态
     initViewState();
     
-    // 更新总视频计数显示
-    const totalCountElement = document.getElementById('total-count');
-    if (totalCountElement) {
-        totalCountElement.textContent = videoData.length;
-    }
+    // 更新页脚数量统计
+    updateFooterCount();
     
     // 确保两种视图都被重新渲染
     renderCurrentView();
@@ -1029,6 +1023,9 @@ function applyFilters() {
     
     // 应用排序
     sortAllData();
+    
+    // 更新页脚数量统计
+    updateFooterCount();
 }
 
 // 设置文本筛选结果
@@ -1095,12 +1092,8 @@ function setFilteredVideos(videos) {
     renderGridView();
     updatePagination();
     
-    // 更新总视频计数显示
-    const totalCountElement = document.getElementById('total-count');
-    if (totalCountElement) {
-        const totalVideos = filteredData ? filteredData.length : videoData.length;
-        totalCountElement.textContent = totalVideos;
-    }
+    // 更新页脚数量统计
+    updateFooterCount();
 }
 
 // 获取当前使用的视频数据
@@ -1136,7 +1129,8 @@ export {
     setConditionFilter,
     clearAllFilters,
     sortVideos,
-    currentSortSettings
+    currentSortSettings,
+    updateFooterCount
 };
 
 // 初始化时将这些方法挂载到window.videoData
@@ -1199,38 +1193,25 @@ function sortAllData() {
         case 'releaseDate':
             // 日期字段排序
             dataToSortCopy.sort((a, b) => {
-                const dateA = a[currentSortSettings.field] ? new Date(a[currentSortSettings.field]) : new Date(0);
-                const dateB = b[currentSortSettings.field] ? new Date(b[currentSortSettings.field]) : new Date(0);
-                
-                // 检查日期是否有效
-                const validDateA = !isNaN(dateA.getTime());
-                const validDateB = !isNaN(dateB.getTime());
-                
-                // 处理无效日期
-                if (!validDateA && !validDateB) return 0;
-                if (!validDateA) return currentSortSettings.direction === 'asc' ? 1 : -1;
-                if (!validDateB) return currentSortSettings.direction === 'asc' ? -1 : 1;
-                
+                const dateA = new Date(a[currentSortSettings.field] || 0);
+                const dateB = new Date(b[currentSortSettings.field] || 0);
                 return currentSortSettings.direction === 'asc' 
-                    ? dateA.getTime() - dateB.getTime() 
-                    : dateB.getTime() - dateA.getTime();
+                    ? dateA - dateB 
+                    : dateB - dateA;
             });
             break;
             
         case 'resolution':
-            // 分辨率特殊处理
+            // 分辨率排序（按像素数量）
             dataToSortCopy.sort((a, b) => {
-                const resA = (a.resolution || '').toString();
-                const resB = (b.resolution || '').toString();
+                const getPixelCount = (resolution) => {
+                    if (!resolution) return 0;
+                    const match = resolution.match(/(\d+)x(\d+)/);
+                    return match ? parseInt(match[1]) * parseInt(match[2]) : 0;
+                };
                 
-                // 提取分辨率数值 (例如从 "1920x1080" 提取宽度和高度)
-                const matchA = resA.match(/(\d+)\s*[xX×]\s*(\d+)/);
-                const matchB = resB.match(/(\d+)\s*[xX×]\s*(\d+)/);
-                
-                // 计算像素总数作为比较基础
-                const pixelsA = matchA ? parseInt(matchA[1]) * parseInt(matchA[2]) : 0;
-                const pixelsB = matchB ? parseInt(matchB[1]) * parseInt(matchB[2]) : 0;
-                
+                const pixelsA = getPixelCount(a.resolution);
+                const pixelsB = getPixelCount(b.resolution);
                 return currentSortSettings.direction === 'asc' 
                     ? pixelsA - pixelsB 
                     : pixelsB - pixelsA;
@@ -1238,27 +1219,22 @@ function sortAllData() {
             break;
             
         default:
-            // 默认排序
-            dataToSortCopy.sort((a, b) => {
-                const valueA = (a[currentSortSettings.field] || '').toString().toLowerCase();
-                const valueB = (b[currentSortSettings.field] || '').toString().toLowerCase();
-                return currentSortSettings.direction === 'asc' 
-                    ? valueA.localeCompare(valueB) 
-                    : valueB.localeCompare(valueA);
-            });
+            console.warn(`未知的排序字段: ${currentSortSettings.field}`);
+            break;
     }
     
-    // 更新排序后的数据
+    // 保存排序后的数据
     sortedData = dataToSortCopy;
     
-    console.log(`排序完成，共 ${sortedData.length} 条数据`);
+    console.log(`排序完成，结果数量: ${sortedData.length}`);
     
-    // 重置到第一页
-    paginationConfig.currentPage = 1;
-    
-    // 更新视图和分页
-    renderCurrentView();
+    // 更新视图
+    renderTableView();
+    renderGridView();
     updatePagination();
+    
+    // 更新页脚数量统计
+    updateFooterCount();
 }
 
 // 更新排序设置
@@ -1284,4 +1260,25 @@ function isValidThumbnailUrl(url) {
     
     // 检查是否是缩略图URL (支持旧格式和新格式)
     return url.includes('thumbnails/') || url.startsWith('app://thumbnail/');
+}
+
+// 更新页脚数量统计
+function updateFooterCount() {
+    const totalCountElement = document.getElementById('total-count');
+    if (totalCountElement) {
+        // 获取当前显示的视频数量
+        const currentData = sortedData || filteredData || videoData;
+        const displayCount = currentData.length;
+        
+        // 如果有筛选条件，显示筛选后的数量和总数量
+        if (filteredData !== null) {
+            totalCountElement.textContent = `${displayCount}`;
+            // 可以考虑显示更详细的信息，比如 "显示 50 / 总共 200 个视频"
+            totalCountElement.title = `显示 ${displayCount} 个，总共 ${videoData.length} 个视频`;
+        } else {
+            // 没有筛选时只显示总数
+            totalCountElement.textContent = `${displayCount}`;
+            totalCountElement.title = `总共 ${displayCount} 个视频`;
+        }
+    }
 }
