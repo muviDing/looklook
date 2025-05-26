@@ -195,6 +195,12 @@ async function initDetailDrawer() {
     // 更换预览图按钮事件（编辑模式）
     changePreviewBtnEdit.addEventListener('click', changePreviewImage);
     
+    // 重新生成预览图按钮事件（编辑模式）
+    const regeneratePreviewBtnEdit = document.getElementById('regenerate-preview-btn-edit');
+    if (regeneratePreviewBtnEdit) {
+        regeneratePreviewBtnEdit.addEventListener('click', regeneratePreviewImage);
+    }
+    
     // 为表格行和画廊卡片添加详情查看事件
     setupDetailViewEvents();
 }
@@ -646,6 +652,72 @@ async function changePreviewImage() {
     } catch (error) {
         console.error('选择预览图失败:', error);
         alert('选择预览图失败: ' + error.message);
+    }
+}
+
+/**
+ * 重新生成预览图
+ */
+async function regeneratePreviewImage() {
+    if (!currentVideoId) {
+        console.error('没有选中的视频');
+        return;
+    }
+    
+    const video = videoData.find(v => v.id === currentVideoId);
+    if (!video || !video.filePath) {
+        console.error('无法找到视频或视频文件路径');
+        return;
+    }
+    
+    const regenerateBtn = document.getElementById('regenerate-preview-btn-edit');
+    if (!regenerateBtn) return;
+    
+    try {
+        // 显示加载状态
+        regenerateBtn.classList.add('loading');
+        regenerateBtn.disabled = true;
+        
+        console.log('开始重新生成预览图:', video.filePath);
+        
+        // 调用主进程重新生成缩略图
+        const result = await window.electronAPI.regenerateThumbnail(video.filePath, video.id);
+        
+        if (result.success) {
+            console.log('重新生成预览图成功:', result.thumbnailUrl);
+            
+            // 添加到上传预览图列表
+            uploadedThumbnailUrls.push(result.thumbnailUrl);
+            
+            // 更新当前编辑中的预览图URL
+            editingThumbnailUrl = result.thumbnailUrl;
+            
+            // 更新编辑模式下的预览图显示
+            document.getElementById('detail-preview-edit').style.backgroundImage = `url("${result.thumbnailUrl}")`;
+            
+            // 显示成功提示
+            const { showCustomAlert } = await import('./areaC.js');
+            showCustomAlert('预览图重新生成成功', 'success');
+            
+            // 重新设置取消编辑按钮事件
+            setupCancelEditButton();
+        } else {
+            console.error('重新生成预览图失败:', result.error);
+            
+            // 显示错误提示
+            const { showCustomAlert } = await import('./areaC.js');
+            showCustomAlert('重新生成预览图失败: ' + (result.error || '未知错误'), 'error');
+        }
+    } catch (error) {
+        console.error('重新生成预览图过程中出错:', error);
+        
+        // 显示错误提示
+        const { showCustomAlert } = await import('./areaC.js');
+        showCustomAlert('重新生成预览图失败: ' + error.message, 'error');
+    } finally {
+        // 恢复按钮状态
+        regenerateBtn.classList.remove('loading');
+        regenerateBtn.disabled = false;
     }
 }
 

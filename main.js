@@ -2622,6 +2622,43 @@ function registerIpcHandlers() {
     }
   });
 
+  // 重新生成缩略图
+  ipcMain.handle('regenerateThumbnail', async (event, videoPath, videoId) => {
+    console.log(`重新生成缩略图: ${videoPath}, 视频ID: ${videoId}`);
+    
+    try {
+      // 检查视频文件是否存在
+      if (!fs.existsSync(videoPath)) {
+        console.error(`视频文件不存在: ${videoPath}`);
+        return { success: false, error: '视频文件不存在' };
+      }
+      
+      // 生成新的缩略图文件名
+      const timestamp = new Date().getTime();
+      const randomStr = Math.random().toString(36).substring(2, 8);
+      const thumbnailFileName = `thumbnail_${videoId}_${timestamp}_${randomStr}.jpg`;
+      const thumbnailPath = path.join(getThumbnailDir(), thumbnailFileName);
+      
+      console.log(`生成缩略图路径: ${thumbnailPath}`);
+      
+      // 调用生成缩略图函数
+      await generateThumbnail(videoPath, thumbnailPath);
+      
+      // 检查缩略图是否生成成功
+      if (fs.existsSync(thumbnailPath)) {
+        const thumbnailUrl = getThumbnailUrl(thumbnailFileName);
+        console.log(`缩略图重新生成成功: ${thumbnailUrl}`);
+        return { success: true, thumbnailUrl };
+      } else {
+        console.error('缩略图文件未生成');
+        return { success: false, error: '缩略图文件未生成' };
+      }
+    } catch (error) {
+      console.error('重新生成缩略图失败:', error);
+      return { success: false, error: error.message };
+    }
+  });
+
   ipcMain.handle('cleanup-duplicates', async () => {
     console.log('处理cleanup-duplicates请求');
     try {
@@ -3389,6 +3426,7 @@ app.whenReady().then(async () => {
   
   // 初始化数据库
   await db.initDatabase();
+  
   
   // 测试FFmpeg执行情况
   testFFmpegExecution();
@@ -4998,3 +5036,106 @@ function buildLosslessCommand(inputPath, outputPath, formatInfo, useGpu) {
   
   return args;
 }
+
+/**
+ * 删除没有被任何数据库记录引用的预览图文件
+ */
+async function cleanupInvalidThumbnails() {
+  console.log('开始清理无效预览图...');
+  logToFile('[CLEANUP] 开始清理无效预览图');
+  
+  try {
+    // 获取缩略图目录
+    const thumbnailDir = getThumbnailDir();
+    
+    // 检查目录是否存在
+    if (!fs.existsSync(thumbnailDir)) {
+      console.log('缩略图目录不存在，跳过清理');
+      logToFile('[CLEANUP] 缩略图目录不存在，跳过清理');
+      return;
+    }
+    
+    // 获取目录中的所有文件
+    const files = fs.readdirSync(thumbnailDir);
+    const imageFiles = files.filter(file => {
+      const ext = path.extname(file).toLowerCase();
+      return ['.jpg', '.jpeg', '.png', '.gif', '.webp'].includes(ext);
+    });
+    
+    if (imageFiles.length === 0) {
+      console.log('缩略图目录中没有图片文件');
+      logToFile('[CLEANUP] 缩略图目录中没有图片文件');
+      return;
+    }
+    
+    console.log(`发现 ${imageFiles.length} 个预览图文件`);
+    logToFile(`[CLEANUP] 发现 ${imageFiles.length} 个预览图文件`);
+    
+    // 从数据库缓存获取所有视频数据
+    const videos = db.getVideoCache();
+    
+    console.log(`从数据库获取到 ${videos.length} 个视频记录`);
+    logToFile(`[CLEANUP] 从数据库获取到 ${videos.length} 个视频记录`);
+    
+    // 收集所有有效的缩略图文件名
+    const validThumbnailUrls = new Set();
+    
+    videos.forEach(video => {
+      if (video.thumbnailUrl) {
+        // 从URL中提取文件名
+        let fileName = '';
+        if (video.thumbnailUrl.startsWith('app://thumbnail/')) {
+          fileName = video.thumbnailUrl.replace('app://thumbnail/', '');
+        } else if (video.thumbnailUrl.includes('thumbnails/')) {
+          fileName = video.thumbnailUrl.split('thumbnails/').pop();
+        }
+        
+        if (fileName) {
+          validThumbnailUrls.add(fileName);
+        }
+      }
+    });
+    
+    console.log(`数据库中有 ${validThumbnailUrls.size} 个有效的预览图引用`);
+    logToFile(`[CLEANUP] 数据库中有 ${validThumbnailUrls.size} 个有效的预览图引用`);
+    
+    // 找出无效的预览图文件（存在于文件系统但不在数据库中）
+    const invalidFiles = imageFiles.filter(file => !validThumbnailUrls.has(file));
+    
+    if (invalidFiles.length === 0) {
+      console.log('没有发现无效的预览图文件');
+      logToFile('[CLEANUP] 没有发现无效的预览图文件');
+      return;
+    }
+    
+    console.log(`发现 ${invalidFiles.length} 个无效的预览图文件，开始删除...`);
+    logToFile(`[CLEANUP] 发现 ${invalidFiles.length} 个无效的预览图文件，开始删除`);
+    
+    // 删除无效文件
+    let deletedCount = 0;
+    for (const file of invalidFiles) {
+      try {
+        const filePath = path.join(thumbnailDir, file);
+        fs.unlinkSync(filePath);
+        deletedCount++;
+        console.log(`已删除无效预览图: ${file}`);
+        logToFile(`[CLEANUP] 已删除无效预览图: ${file}`);
+      } catch (error) {
+        console.error(`删除预览图失败 ${file}:`, error.message);
+        logToFile(`[CLEANUP] 删除预览图失败 ${file}: ${error.message}`);
+      }
+    }
+    
+    console.log(`清理完成，共删除 ${deletedCount} 个无效预览图文件`);
+    logToFile(`[CLEANUP] 清理完成，共删除 ${deletedCount} 个无效预览图文件`);
+    
+  } catch (error) {
+    console.error('清理无效预览图失败:', error);
+    logToFile(`[CLEANUP] 清理无效预览图失败: ${error.message}`);
+  }
+}
+
+// 导出函数供其他模块使用
+module.exports = {
+  cleanupInvalidThumbnails
+};

@@ -135,6 +135,48 @@
   font-size: 20px;
 }
 
+/* 圆形图标【重新生成预览图】按钮 */
+.regenerate-preview-btn-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background-color: rgba(255, 255, 255, 0.85);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  color: #059669; /* 使用绿色区分功能 */
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
+  backdrop-filter: blur(4px);
+}
+
+.regenerate-preview-btn-icon:hover {
+  background-color: rgba(255, 255, 255, 0.95);
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.regenerate-preview-btn-icon i {
+  font-size: 20px;
+}
+
+.regenerate-preview-btn-icon.loading {
+  color: #6b7280;
+  cursor: not-allowed;
+}
+
+.regenerate-preview-btn-icon.loading i {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 /* ===== 5. F-1查看视图样式 ===== */
 .detail-view-mode {
   padding: 16px; /* 减小内边距 */

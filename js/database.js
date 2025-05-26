@@ -241,6 +241,10 @@ function initDatabase() {
         return checkAllVideoFilesExist();
     })
     .then(() => {
+        // 清理无效的预览图文件
+        return require('../main').cleanupInvalidThumbnails();
+    })
+    .then(() => {
         console.log('数据库模块初始化完成');
     })
     .catch(err => {

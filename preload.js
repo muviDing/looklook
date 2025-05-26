@@ -87,6 +87,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // 删除缩略图
   deleteThumbnail: (thumbnailPath) => ipcRenderer.invoke('deleteThumbnail', thumbnailPath),
   
+  // 重新生成缩略图
+  regenerateThumbnail: (videoPath, videoId) => ipcRenderer.invoke('regenerateThumbnail', videoPath, videoId),
+  
   // 测试功能
   testFFmpeg: (args) => ipcRenderer.invoke('test-ffmpeg', args),
 
