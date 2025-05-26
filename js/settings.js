@@ -9,7 +9,7 @@ const DEFAULT_SETTINGS = {
     scanFolders: []
   },
   import: {
-    titleRegex: "([A-Za-z]{2,5})[-_. ]?(\\d{2,6}[A-Za-z]?)"
+    titleRegex: "([A-Za-z]{2,5})-(\\d{2,6}[A-Za-z]?)"
   },
   quickTags: []
 };

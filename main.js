@@ -3552,7 +3552,7 @@ const DEFAULT_SETTINGS = {
     "scanFolders": []
   },
   "import": {
-    "titleRegex": "([A-Za-z]{2,5})[-_. ]?(\\d{2,6}[A-Za-z]?)"
+    "titleRegex": "([A-Za-z]{2,5})-(\\d{2,6}[A-Za-z]?)"
   },
   "quickTags": []
 };
@@ -4528,9 +4528,9 @@ async function processNextCompressionTask(options, stats) {
       
       // 如果勾选了自动打标签，为新记录添加对应的压缩类型标签
       if (options.autoTag) {
-        const compressTypeTag = options.mode === 'perceptual' ? 
-          (options.useGpu ? '已压缩_高效感知无损_GPU' : '已压缩_高效感知无损') :
-          (options.useGpu ? '已压缩_完全无损_GPU' : '已压缩_完全无损');
+        const compressTypeTag = options.mode === 'perceptual' ? '已压缩_高效感知无损' : '已压缩_完全无损';
+          // (options.useGpu ? '已压缩_高效感知无损_GPU' : '已压缩_高效感知无损') :
+          // (options.useGpu ? '已压缩_完全无损_GPU' : '已压缩_完全无损');
         
         compressedVideo.collection = processCollectionTags(compressedVideo.collection, compressTypeTag);
       }
