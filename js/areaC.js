@@ -522,9 +522,38 @@ function getSortConfig(field) {
             };
             break;
             
+        case 'fileSize':
+            // 文件大小字段 - 需要解析格式化的字符串
+            compareFunction = (cellA, cellB) => {
+                const parseFileSize = (sizeStr) => {
+                    if (!sizeStr) return 0;
+                    
+                    // 提取数字和单位
+                    const match = sizeStr.match(/^([\d.]+)\s*([KMGT]?B)$/i);
+                    if (!match) return 0;
+                    
+                    const value = parseFloat(match[1]);
+                    const unit = match[2].toUpperCase();
+                    
+                    // 转换为字节
+                    switch (unit) {
+                        case 'B': return value;
+                        case 'KB': return value * 1024;
+                        case 'MB': return value * 1024 * 1024;
+                        case 'GB': return value * 1024 * 1024 * 1024;
+                        case 'TB': return value * 1024 * 1024 * 1024 * 1024;
+                        default: return value;
+                    }
+                };
+                
+                const bytesA = parseFileSize(cellA.textContent.trim());
+                const bytesB = parseFileSize(cellB.textContent.trim());
+                return bytesA - bytesB;
+            };
+            break;
+            
         case 'rating':
         case 'viewCount':
-        case 'fileSize':
             // 数值字段
             compareFunction = (cellA, cellB) => {
                 const valueA = parseFloat(cellA.textContent.replace(/[^\d.-]/g, '')) || 0;

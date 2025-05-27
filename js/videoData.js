@@ -1174,9 +1174,40 @@ function sortAllData() {
             });
             break;
             
+        case 'fileSize':
+            // 文件大小排序 - 需要解析格式化的字符串
+            dataToSortCopy.sort((a, b) => {
+                const parseFileSize = (sizeStr) => {
+                    if (!sizeStr) return 0;
+                    
+                    // 提取数字和单位
+                    const match = sizeStr.match(/^([\d.]+)\s*([KMGT]?B)$/i);
+                    if (!match) return 0;
+                    
+                    const value = parseFloat(match[1]);
+                    const unit = match[2].toUpperCase();
+                    
+                    // 转换为字节
+                    switch (unit) {
+                        case 'B': return value;
+                        case 'KB': return value * 1024;
+                        case 'MB': return value * 1024 * 1024;
+                        case 'GB': return value * 1024 * 1024 * 1024;
+                        case 'TB': return value * 1024 * 1024 * 1024 * 1024;
+                        default: return value;
+                    }
+                };
+                
+                const bytesA = parseFileSize(a.fileSize);
+                const bytesB = parseFileSize(b.fileSize);
+                return currentSortSettings.direction === 'asc' 
+                    ? bytesA - bytesB 
+                    : bytesB - bytesA;
+            });
+            break;
+            
         case 'rating':
         case 'viewCount':
-        case 'fileSize':
             // 数值字段排序
             dataToSortCopy.sort((a, b) => {
                 const valueA = parseFloat(a[currentSortSettings.field]) || 0;

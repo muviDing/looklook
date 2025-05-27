@@ -528,7 +528,13 @@ function updateCompressionProgress(progress) {
   
   // 更新节省空间
   if (progress.totalSavedSpace) {
-    savedSpaceEl.textContent = `${progress.totalSavedSpace}MB`;
+    // 当节省空间大于0.1GB时，显示为GB单位
+    if (progress.totalSavedSpace > 102.4) { // 0.1GB = 102.4MB
+      const savedSpaceGB = (progress.totalSavedSpace / 1024).toFixed(1);
+      savedSpaceEl.textContent = `${savedSpaceGB}GB`;
+    } else {
+      savedSpaceEl.textContent = `${progress.totalSavedSpace}MB`;
+    }
   }
   
   // 处理当前文件进度显示
@@ -576,9 +582,13 @@ function updateCompressionProgress(progress) {
       const li = document.createElement('li');
       li.className = 'bg-gray-50 rounded-lg p-4 mb-3 shadow-sm border border-gray-200';
       
-      // 获取模式文本
-      const modeName = item.mode === 'perceptual' ? '高效感知无损' : '完全无损';
-      const modeText = item.useGpu ? `${modeName}_GPU` : modeName;
+      // 格式化文件大小显示
+      const formatSize = (sizeMB) => {
+        if (sizeMB > 102.4) { // 0.1GB = 102.4MB
+          return `${(sizeMB / 1024).toFixed(1)}GB`;
+        }
+        return `${sizeMB}MB`;
+      };
       
       li.innerHTML = `
         <div class="mb-3">
@@ -586,10 +596,10 @@ function updateCompressionProgress(progress) {
         </div>
         <div class="flex items-center justify-between flex-wrap gap-2">
           <div class="flex items-center gap-2">
-            <span class="text-xs text-gray-500">${item.originalSize}MB</span>
+            <span class="text-xs text-gray-500">${formatSize(item.originalSize)}</span>
             <i class="fas fa-arrow-right text-xs text-gray-400"></i>
-            <span class="text-xs font-semibold text-green-700">${item.compressedSize}MB</span>
-            <span class="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">节省${item.savedSpace}MB</span>
+            <span class="text-xs font-semibold text-green-700">${formatSize(item.compressedSize)}</span>
+            <span class="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-700">节省${formatSize(item.savedSpace)}</span>
           </div>
           <div class="flex items-center gap-1">
             <i class="fas fa-tag text-xs ${item.autoTag ? 'text-blue-500' : 'text-gray-300'}" title="${item.autoTag ? '已添加标签' : '未添加标签'}"></i>
@@ -640,8 +650,12 @@ function updateCompressionProgress(progress) {
     progress.pendingList.forEach(item => {
       const li = document.createElement('li');
       li.className = 'bg-blue-50 rounded-lg p-3 mb-3 shadow-sm';
+      
+      // 检查item是否为对象，如果是字符串则直接使用
+      const fileName = typeof item === 'string' ? item : (item.fileName || item);
+      
       li.innerHTML = `
-        <div class="text-sm text-gray-800 truncate font-medium">${item.fileName}</div>
+        <div class="text-sm text-gray-800 truncate font-medium">${fileName}</div>
       `;
       pendingList.appendChild(li);
     });

@@ -30,6 +30,8 @@ body {
     align-items: center;
     -webkit-app-region: drag; /* 允许拖动窗口 */
     height: 36px; /* 固定高度 */
+    position: relative;
+    z-index: 10000; /* 设置最高层级，确保始终置顶 */
 }
 
 .title {

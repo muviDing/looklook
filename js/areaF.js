@@ -272,9 +272,10 @@ function switchViewMode(mode) {
 /**
  * 打开详情抽屉
  * @param {string} videoId - 视频ID
+ * @param {string} defaultMode - 默认模式：'view' 或 'edit'，默认为 'view'
  */
-async function openDetailDrawer(videoId) {
-    console.log('打开详情抽屉, 视频ID:', videoId);
+async function openDetailDrawer(videoId, defaultMode = 'view') {
+    console.log('打开详情抽屉, 视频ID:', videoId, '默认模式:', defaultMode);
     
     // 获取视频数据
     const video = videoData.find(v => v.id === videoId);
@@ -305,8 +306,8 @@ async function openDetailDrawer(videoId) {
     // 设置预览图（编辑模式）
     document.getElementById('detail-preview-edit').style.backgroundImage = `url("${previewImgUrl}")`;
     
-    // 默认切换到查看视图
-    switchViewMode('view');
+    // 根据参数切换到指定视图
+    switchViewMode(defaultMode);
     
     // 更新查看视图内容
     updateViewModeContent(video);

@@ -382,7 +382,7 @@ function setupVideoItemEvents() {
         
         const editItem = document.createElement('div');
         editItem.className = 'context-menu-item';
-        editItem.innerHTML = '<i class="fas fa-info-circle mr-2"></i>查看详情';
+        editItem.innerHTML = '<i class="fas fa-edit mr-2"></i>编辑详情';
         editItem.addEventListener('click', function() {
             closeContextMenu();
             if (currentVideo) {
@@ -630,15 +630,15 @@ async function playVideo(videoId) {
 
 // 编辑视频
 async function editVideo(videoId) {
-    console.log(`查看视频详情: ${videoId}`);
+    console.log(`编辑视频详情: ${videoId}`);
     const video = videoData.find(v => v.id === videoId);
     if (!video) return;
     
     try {
-        // 导入areaF.js中的openDetailDrawer函数并调用
+        // 导入areaF.js中的openDetailDrawer函数并调用，直接进入编辑模式
         const module = await import('./areaF.js');
         if (typeof module.openDetailDrawer === 'function') {
-            await module.openDetailDrawer(videoId);
+            await module.openDetailDrawer(videoId, 'edit');
         } else {
             console.error('无法打开详情抽屉: openDetailDrawer函数不存在');
         }
