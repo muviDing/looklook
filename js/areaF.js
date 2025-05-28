@@ -312,6 +312,25 @@ async function openDetailDrawer(videoId, defaultMode = 'view') {
     // 更新查看视图内容
     updateViewModeContent(video);
     
+    // 确保多选组件已初始化，如果没有则重新初始化
+    if (!collectionSelect) {
+        try {
+            collectionSelect = await initMultiSelect('collection', 'collection', '搜索或添加新标签...');
+            console.log('重新初始化标签多选组件成功');
+        } catch (error) {
+            console.error('重新初始化标签多选组件失败:', error);
+        }
+    }
+    
+    if (!actorsSelect) {
+        try {
+            actorsSelect = await initMultiSelect('actors', 'actors', '搜索或添加新演员...');
+            console.log('重新初始化演员多选组件成功');
+        } catch (error) {
+            console.error('重新初始化演员多选组件失败:', error);
+        }
+    }
+    
     // 在填充表单之前强制刷新标签和演员数据
     try {
         const { syncDataFromEnum } = await import('./multiSelectData.js');
@@ -344,11 +363,13 @@ async function openDetailDrawer(videoId, defaultMode = 'view') {
     // 使用多选组件设置标签值
     if (collectionSelect) {
         collectionSelect.setValue(video.collection || '');
+        console.log('设置标签值:', video.collection);
     }
     
     // 使用多选组件设置演员值
     if (actorsSelect) {
         actorsSelect.setValue(video.actors || '');
+        console.log('设置演员值:', video.actors);
     }
     
     document.getElementById('detail-notes').value = video.notes || '';
@@ -539,46 +560,17 @@ function closeDetailDrawer() {
     document.getElementById('detail-preview').style.backgroundImage = '';
     document.getElementById('detail-code').value = '';
     
-    // 清理和重置多选组件
+    // 清理多选组件的值，但不销毁组件
     if (collectionSelect) {
-        // 先清空值
         collectionSelect.setValue('');
-        // 清理事件监听器以防止内存泄漏
-        if (typeof collectionSelect.destroy === 'function') {
-            collectionSelect.destroy();
-        }
     }
     if (actorsSelect) {
-        // 先清空值
         actorsSelect.setValue('');
-        // 清理事件监听器以防止内存泄漏
-        if (typeof actorsSelect.destroy === 'function') {
-            actorsSelect.destroy();
-        }
     }
     
     document.getElementById('detail-releasedate').value = '';
     document.getElementById('detail-notes').value = '';
     resetStarsToValue();
-    
-    // 重新初始化多选组件，以便下次使用
-    initMultiSelect('collection', 'collection', '搜索或添加新标签...')
-        .then(component => {
-            collectionSelect = component;
-            console.log('重置标签多选组件成功');
-        })
-        .catch(error => {
-            console.error('重置标签多选组件失败:', error);
-        });
-    
-    initMultiSelect('actors', 'actors', '搜索或添加新演员...')
-        .then(component => {
-            actorsSelect = component;
-            console.log('重置演员多选组件成功');
-        })
-        .catch(error => {
-            console.error('重置演员多选组件失败:', error);
-        });
 }
 
 /**
@@ -925,7 +917,9 @@ async function saveVideoDetails() {
         // 兼容旧版本，如果多选组件未初始化，则使用隐藏输入框的值
         collection = document.getElementById('detail-collection').value;
     }
-    
+    console.log('标签:', collection);
+
+
     // 使用多选组件获取演员值
     let actors = '';
     if (actorsSelect) {
@@ -937,7 +931,8 @@ async function saveVideoDetails() {
     
     const notes = document.getElementById('detail-notes').value;
     const releaseDate = document.getElementById('detail-releasedate').value;
-    
+    console.log('演员:', actors);
+
     // 使用当前评分值
     const rating = currentRating;
     
