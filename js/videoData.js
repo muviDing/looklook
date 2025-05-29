@@ -28,12 +28,65 @@ let currentSortSettings = {
     direction: 'asc'
 };
 
+// 筛选状态保存 - 新增
+let savedFilterState = {
+    searchTerm: '',
+    searchMode: 'include',
+    selectedCollections: [],
+    selectedActors: []
+};
+
 // 分页配置
 let paginationConfig = {
     currentPage: 1,
     pageSize: 20,
     totalPages: 1
 };
+
+// 保存当前筛选状态 - 新增函数
+function saveCurrentFilterState() {
+    // 获取搜索框内容
+    const searchInput = document.querySelector('.search-input');
+    const searchTerm = searchInput ? searchInput.value.trim() : '';
+    
+    // 获取搜索模式（从areaB模块获取）
+    const searchIcon = document.querySelector('.search-box i');
+    const searchMode = searchIcon && searchIcon.classList.contains('fa-ban') ? 'exclude' : 'include';
+    
+    // 保存状态
+    savedFilterState = {
+        searchTerm: searchTerm,
+        searchMode: searchMode,
+        selectedCollections: [...(savedFilterState.selectedCollections || [])],
+        selectedActors: [...(savedFilterState.selectedActors || [])]
+    };
+    
+    console.log('保存筛选状态:', savedFilterState);
+}
+
+// 恢复筛选状态 - 新增函数
+function restoreFilterState() {
+    console.log('恢复筛选状态:', savedFilterState);
+    
+    // 恢复搜索框内容
+    const searchInput = document.querySelector('.search-input');
+    if (searchInput && savedFilterState.searchTerm) {
+        searchInput.value = savedFilterState.searchTerm;
+    }
+    
+    // 通知areaB模块恢复筛选状态
+    const restoreEvent = new CustomEvent('restoreFilterState', {
+        detail: savedFilterState
+    });
+    document.dispatchEvent(restoreEvent);
+}
+
+// 更新筛选状态中的条件筛选部分 - 新增函数
+function updateFilterStateConditions(collections, actors) {
+    savedFilterState.selectedCollections = collections ? [...collections] : [];
+    savedFilterState.selectedActors = actors ? [...actors] : [];
+    console.log('更新条件筛选状态:', { collections: savedFilterState.selectedCollections, actors: savedFilterState.selectedActors });
+}
 
 // 更新分页UI
 function updatePagination() {
@@ -935,6 +988,9 @@ function initViewState() {
  */
 async function refreshVideoData() {
     try {
+        // 保存当前筛选状态
+        saveCurrentFilterState();
+        
         // 从数据库获取最新数据
         const freshData = await window.electronAPI.getVideos();
         
@@ -944,14 +1000,17 @@ async function refreshVideoData() {
         
         console.log(`数据库刷新完成，共获取 ${videoData.length} 个视频`);
         
-        // 清除筛选状态，确保显示最新的完整数据
+        // 清除筛选状态，但不立即渲染视图
         textFilteredData = null;
         conditionFilteredData = null;
         filteredData = null;
         sortedData = null;
         
-        // 应用当前的排序设置
-        sortAllData();
+        // 立即恢复筛选状态（同步进行，避免闪烁）
+        restoreFilterState();
+        
+        // 手动合并筛选结果
+        applyFilters();
         
         // 更新视图状态
         initViewState();
@@ -967,14 +1026,20 @@ async function refreshVideoData() {
 
 // 当视频数据变化时更新视图状态
 function onVideoDataChanged() {
-    // 清除筛选，确保显示完整数据
+    // 保存当前筛选状态
+    saveCurrentFilterState();
+    
+    // 清除筛选，但不立即渲染视图
     textFilteredData = null;
     conditionFilteredData = null;
     filteredData = null;
     sortedData = null;
     
-    // 应用排序
-    sortAllData();
+    // 立即恢复筛选状态（同步进行，避免闪烁）
+    restoreFilterState();
+    
+    // 手动合并筛选结果
+    applyFilters();
     
     // 更新视图状态
     initViewState();
@@ -1060,6 +1125,30 @@ function setConditionFilter(videos) {
     applyFilters();
 }
 
+// 静默设置文本筛选结果 - 新增函数
+function setTextFilterSilently(videos) {
+    if (videos === null) {
+        console.log('静默清除文本筛选');
+        textFilteredData = null;
+    } else {
+        console.log(`静默设置文本筛选结果: ${videos.length} 个视频`);
+        textFilteredData = videos;
+    }
+    // 不调用applyFilters()，避免触发视图渲染
+}
+
+// 静默设置条件筛选结果 - 新增函数
+function setConditionFilterSilently(videos) {
+    if (videos === null) {
+        console.log('静默清除条件筛选');
+        conditionFilteredData = null;
+    } else {
+        console.log(`静默设置条件筛选结果: ${videos.length} 个视频`);
+        conditionFilteredData = videos;
+    }
+    // 不调用applyFilters()，避免触发视图渲染
+}
+
 // 清除所有筛选
 function clearAllFilters() {
     textFilteredData = null;
@@ -1127,10 +1216,13 @@ export {
     getVideos,
     setTextFilter,
     setConditionFilter,
+    setTextFilterSilently,
+    setConditionFilterSilently,
     clearAllFilters,
     sortVideos,
     currentSortSettings,
-    updateFooterCount
+    updateFooterCount,
+    updateFilterStateConditions
 };
 
 // 初始化时将这些方法挂载到window.videoData
@@ -1140,8 +1232,11 @@ window.videoData = {
     getVideos,
     setTextFilter,
     setConditionFilter,
+    setTextFilterSilently,
+    setConditionFilterSilently,
     clearAllFilters,
-    sortVideos
+    sortVideos,
+    updateFilterStateConditions
 };
 
 // 排序所有数据

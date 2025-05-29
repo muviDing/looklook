@@ -1,5 +1,5 @@
 {
-  "name": "zaigaikankanle",
+  "name": "kankan",
   "version": "2.1.2",
   "description": "本地视频管理工具",
   "main": "main.js",
@@ -16,7 +16,7 @@
     "rimraf": "^6.0.1"
   },
   "build": {
-    "appId": "com.zaigaikankanle.app",
+    "appId": "com.kankan.app",
     "productName": "早该看看了",
     "win": {
       "target": "nsis",

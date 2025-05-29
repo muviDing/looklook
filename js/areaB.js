@@ -74,6 +74,9 @@ function initSearchFilter() {
     
     // 添加筛选气泡刷新事件监听
     document.addEventListener('filter-bubbles-refresh', handleFilterBubblesRefresh);
+    
+    // 添加筛选状态恢复事件监听 - 新增
+    document.addEventListener('restoreFilterState', handleRestoreFilterState);
 }
 
 // 切换搜索模式
@@ -679,6 +682,11 @@ function applyAdvancedFilter() {
         actors: selectedActors
     };
     
+    // 通知videoData模块更新筛选状态 - 新增
+    if (window.videoData && window.videoData.updateFilterStateConditions) {
+        window.videoData.updateFilterStateConditions(selectedCollections, selectedActors);
+    }
+    
     // 更新URL参数
     updateUrlWithFilters(filterData);
     
@@ -815,6 +823,147 @@ function filterVideos(searchTerm) {
     
     // 使用新的API更新文本筛选结果
     window.videoData.setTextFilter(filteredVideos);
+}
+
+// 处理筛选状态恢复事件 - 新增函数
+function handleRestoreFilterState(event) {
+    const filterState = event.detail;
+    console.log('接收到筛选状态恢复事件:', filterState);
+    
+    // 恢复搜索模式
+    if (filterState.searchMode) {
+        searchMode = filterState.searchMode;
+        updateSearchIcon();
+    }
+    
+    // 恢复搜索词 - 静默恢复，不触发视图渲染
+    if (filterState.searchTerm) {
+        const searchInput = document.querySelector('.search-input');
+        if (searchInput) {
+            searchInput.value = filterState.searchTerm;
+            // 静默应用文本筛选，不触发视图渲染
+            applyTextFilterSilently(filterState.searchTerm.toLowerCase());
+        }
+    }
+    
+    // 恢复条件筛选状态 - 静默恢复，不触发视图渲染
+    if (filterState.selectedCollections || filterState.selectedActors) {
+        selectedCollections = [...(filterState.selectedCollections || [])];
+        selectedActors = [...(filterState.selectedActors || [])];
+        
+        // 刷新气泡显示状态（仅更新UI，不触发筛选）
+        refreshCollectionBubbles();
+        refreshActorsBubbles();
+        
+        // 静默应用条件筛选，不触发视图渲染
+        applyConditionFilterSilently();
+    }
+}
+
+// 静默应用文本筛选 - 新增函数
+function applyTextFilterSilently(searchTerm) {
+    if (!searchTerm) {
+        window.videoData.setTextFilter(null);
+        return;
+    }
+    
+    const videos = window.videoData.getVideos();
+    
+    const filteredVideos = videos.filter(video => {
+        const matchesSearchTerm = (
+            (video.fileName && video.fileName.toLowerCase().includes(searchTerm)) ||
+            (video.code && video.code.toLowerCase().includes(searchTerm)) ||
+            (video.collection && (
+                typeof video.collection === 'string' 
+                    ? video.collection.toLowerCase().includes(searchTerm) 
+                    : Array.isArray(video.collection) 
+                        ? video.collection.some(c => c.toLowerCase().includes(searchTerm))
+                        : String(video.collection).toLowerCase().includes(searchTerm)
+            )) ||
+            (video.actors && (
+                typeof video.actors === 'string' 
+                    ? video.actors.toLowerCase().includes(searchTerm) 
+                    : Array.isArray(video.actors) 
+                        ? video.actors.some(a => a.toLowerCase().includes(searchTerm))
+                        : String(video.actors).toLowerCase().includes(searchTerm)
+            )) ||
+            (video.notes && video.notes.toLowerCase().includes(searchTerm)) ||
+            (video.filePath && video.filePath.toLowerCase().includes(searchTerm))
+        );
+        
+        return searchMode === 'include' ? matchesSearchTerm : !matchesSearchTerm;
+    });
+    
+    // 直接设置筛选结果，不触发视图渲染
+    if (window.videoData.setTextFilterSilently) {
+        window.videoData.setTextFilterSilently(filteredVideos);
+    } else {
+        // 如果没有静默方法，使用普通方法
+        window.videoData.setTextFilter(filteredVideos);
+    }
+}
+
+// 静默应用条件筛选 - 新增函数
+function applyConditionFilterSilently() {
+    const filterData = {
+        collections: selectedCollections,
+        actors: selectedActors
+    };
+    
+    const videos = window.videoData.getVideos();
+    
+    const hasCollections = filterData.collections && filterData.collections.length > 0;
+    const hasActors = filterData.actors && filterData.actors.length > 0;
+    const hasActiveFilters = hasCollections || hasActors;
+    
+    if (!hasActiveFilters) {
+        if (window.videoData.setConditionFilterSilently) {
+            window.videoData.setConditionFilterSilently(null);
+        } else {
+            window.videoData.setConditionFilter(null);
+        }
+        return;
+    }
+    
+    const filteredVideos = videos.filter(video => {
+        if (hasCollections) {
+            if (!video.collection) return false;
+            
+            const videoCollections = typeof video.collection === 'string' 
+                ? video.collection.split(/\s*,\s*/).map(c => c.trim()).filter(c => c)
+                : Array.isArray(video.collection) ? video.collection : [video.collection];
+            
+            const hasMatchingCollection = filterData.collections.some(collection =>
+                videoCollections.includes(collection)
+            );
+            
+            if (!hasMatchingCollection) return false;
+        }
+        
+        if (hasActors) {
+            if (!video.actors) return false;
+            
+            const videoActors = typeof video.actors === 'string' 
+                ? video.actors.split(/\s*,\s*/).map(a => a.trim()).filter(a => a)
+                : Array.isArray(video.actors) ? video.actors : [video.actors];
+            
+            const hasMatchingActor = filterData.actors.some(actor =>
+                videoActors.includes(actor)
+            );
+            
+            if (!hasMatchingActor) return false;
+        }
+        
+        return true;
+    });
+    
+    // 直接设置筛选结果，不触发视图渲染
+    if (window.videoData.setConditionFilterSilently) {
+        window.videoData.setConditionFilterSilently(filteredVideos);
+    } else {
+        // 如果没有静默方法，使用普通方法
+        window.videoData.setConditionFilter(filteredVideos);
+    }
 }
 
 // 导出函数供主模块使用
