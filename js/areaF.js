@@ -1242,12 +1242,14 @@ function isValidFilename(filename) {
  */
 async function checkFilenameConflict(newFileNameWithoutExt, currentFilePath) {
     try {
-        // 获取当前文件的目录和扩展名
-        const currentDir = currentFilePath.substring(0, currentFilePath.lastIndexOf('/'));
+        // 获取当前文件的目录和扩展名，支持Windows和Unix路径分隔符
+        const lastSlashIndex = Math.max(currentFilePath.lastIndexOf('/'), currentFilePath.lastIndexOf('\\'));
+        const currentDir = currentFilePath.substring(0, lastSlashIndex);
         const fileExtension = currentFilePath.substring(currentFilePath.lastIndexOf('.'));
         
-        // 构建新的文件路径
-        const newFilePath = `${currentDir}/${newFileNameWithoutExt}${fileExtension}`;
+        // 构建新的文件路径，使用原路径的分隔符
+        const pathSeparator = currentFilePath.includes('\\') ? '\\' : '/';
+        const newFilePath = `${currentDir}${pathSeparator}${newFileNameWithoutExt}${fileExtension}`;
         
         // 如果新路径和当前路径相同，说明没有修改
         if (newFilePath === currentFilePath) {
@@ -1275,8 +1277,8 @@ function getEditedFileName() {
         return null;
     }
     
-    const newName = filenameInput.value.trim();
-    if (!newName) {
+    const newFileName = filenameInput.value.trim();
+    if (!newFileName) {
         return null;
     }
     
@@ -1288,16 +1290,18 @@ function getEditedFileName() {
     
     const currentFilePath = currentVideo.filePath;
     const fileExtension = currentFilePath.substring(currentFilePath.lastIndexOf('.'));
-    const fullNewFileName = newName + fileExtension;
+    const fullNewFileName = newFileName + fileExtension;
     
     // 如果文件名没有变化，返回null
     if (fullNewFileName === currentVideo.fileName) {
         return null;
     }
     
-    // 构建新的文件路径
-    const currentDir = currentFilePath.substring(0, currentFilePath.lastIndexOf('/'));
-    const newFilePath = `${currentDir}/${fullNewFileName}`;
+    // 构建新的文件路径，支持Windows和Unix路径分隔符
+    const lastSlashIndex = Math.max(currentFilePath.lastIndexOf('/'), currentFilePath.lastIndexOf('\\'));
+    const currentDir = currentFilePath.substring(0, lastSlashIndex);
+    const pathSeparator = currentFilePath.includes('\\') ? '\\' : '/';
+    const newFilePath = `${currentDir}${pathSeparator}${fullNewFileName}`;
     
     return {
         newFileName: fullNewFileName,
