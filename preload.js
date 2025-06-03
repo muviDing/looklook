@@ -71,6 +71,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveVideo: (video) => ipcRenderer.invoke('save-video', video),
   saveVideos: (videos) => ipcRenderer.invoke('save-videos', videos),
   updateVideo: (video) => ipcRenderer.invoke('update-video', video),
+  updateVideoFilePath: (videoId, newFilePath) => ipcRenderer.invoke('updateVideoFilePath', videoId, newFilePath),
+  renameVideoFile: (oldFilePath, newFilePath) => ipcRenderer.invoke('renameVideoFile', oldFilePath, newFilePath),
   deleteVideo: (videoId) => ipcRenderer.invoke('delete-video', videoId),
   deleteVideos: (videoIds) => ipcRenderer.invoke('delete-videos', videoIds),
   cleanupDuplicates: () => ipcRenderer.invoke('cleanup-duplicates'),

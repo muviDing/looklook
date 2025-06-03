@@ -235,6 +235,17 @@ function switchViewMode(mode) {
         viewFooterActions.style.display = 'none';
         editFooterActions.style.display = 'flex';
         
+        // 清除文件名编辑的错误状态
+        const filenameInput = document.getElementById('edit-filename');
+        const filenameError = document.getElementById('filename-error');
+        if (filenameInput) {
+            filenameInput.classList.remove('error');
+        }
+        if (filenameError) {
+            filenameError.classList.remove('show');
+            filenameError.textContent = '';
+        }
+        
         // 保存当前预览图URL作为编辑开始时的状态
         editingThumbnailUrl = currentThumbnailUrl;
         
@@ -254,6 +265,17 @@ function switchViewMode(mode) {
         editFooterActions.style.display = 'none';
         viewFooterActions.style.display = 'flex';
         
+        // 清除文件名编辑的错误状态并重置输入框
+        const filenameInput = document.getElementById('edit-filename');
+        const filenameError = document.getElementById('filename-error');
+        if (filenameInput) {
+            filenameInput.classList.remove('error');
+        }
+        if (filenameError) {
+            filenameError.classList.remove('show');
+            filenameError.textContent = '';
+        }
+        
         // 移除编辑模式的类名
         backdrop.classList.remove('editing');
         
@@ -264,6 +286,8 @@ function switchViewMode(mode) {
             const video = videoData.find(v => v.id === currentVideoId);
             if (video) {
                 updateViewModeContent(video);
+                // 重新初始化文件名编辑，恢复原始值
+                initFileNameEdit(video);
             }
         }
     }
@@ -439,6 +463,9 @@ function updateViewModeContent(video) {
     setTextContent('edit-view-importdate', importDate);
     setTextContent('edit-view-viewcount', video.viewCount || '0');
     setTextContent('edit-view-lastview', lastViewDate);
+    
+    // 初始化文件名编辑功能
+    initFileNameEdit(video);
     
     // 更新评分星星
     updateViewRating(video.rating || 0);
@@ -901,6 +928,20 @@ async function playVideo(videoId) {
  * 保存视频详情
  */
 async function saveVideoDetails() {
+    console.log('开始保存视频详情');
+    
+    // 检查表单是否有错误
+    const filenameInput = document.getElementById('edit-filename');
+    const filenameError = document.getElementById('filename-error');
+    
+    if (filenameInput && (filenameInput.classList.contains('error') || filenameError.classList.contains('show'))) {
+        showMessage('请先修正文件名错误', 'error');
+        return;
+    }
+    
+    const saveBtn = document.getElementById('save-btn');
+    const originalText = saveBtn.innerHTML;
+    
     if (!currentVideoId) {
         console.error('没有选中的视频');
         return;
@@ -944,6 +985,9 @@ async function saveVideoDetails() {
         thumbnailUrl = '';
     }
     
+    // 检查文件名是否有更改
+    const editedFileNameInfo = getEditedFileName();
+    
     // 查找视频对象
     const videoIndex = videoData.findIndex(v => v.id === currentVideoId);
     if (videoIndex === -1) {
@@ -966,10 +1010,46 @@ async function saveVideoDetails() {
         releaseDate
     };
     
+    // 如果文件名有更改，添加到更新对象中
+    if (editedFileNameInfo) {
+        // 先检查目标文件是否已存在
+        const targetExists = await window.electronAPI.checkFileExists(editedFileNameInfo.newFilePath);
+        if (targetExists) {
+            // 显示错误信息
+            const filenameError = document.getElementById('filename-error');
+            const filenameInput = document.getElementById('edit-filename');
+            filenameError.textContent = '目标文件已存在，无法保存';
+            filenameError.classList.add('show');
+            filenameInput.classList.add('error');
+            showMessage('文件名冲突，无法保存', 'error');
+            return;
+        }
+        
+        // 重命名物理文件
+        try {
+            const renameResult = await window.electronAPI.renameVideoFile(
+                editedFileNameInfo.oldFilePath, 
+                editedFileNameInfo.newFilePath
+            );
+            
+            if (!renameResult.success) {
+                showMessage(`重命名文件失败: ${renameResult.error}`, 'error');
+                return;
+            }
+            
+            console.log('物理文件重命名成功');
+        } catch (error) {
+            console.error('重命名物理文件失败:', error);
+            showMessage('重命名文件失败', 'error');
+            return;
+        }
+        
+        updatedVideo.fileName = editedFileNameInfo.newFileName;
+        updatedVideo.filePath = editedFileNameInfo.newFilePath;
+    }
+    
     try {
         // 显示保存中提示
-        const saveBtn = document.getElementById('save-btn');
-        const originalText = saveBtn.innerHTML;
         saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 保存中...';
         saveBtn.disabled = true;
         
@@ -1029,12 +1109,12 @@ async function saveVideoDetails() {
         console.log('保存视频详情后同步数据并刷新筛选浮窗');
         // 主动刷新筛选区域，确保H区域能立即获取到新值
         await refreshFilterBubbles(true);
+        
     } catch (error) {
         console.error('保存视频详情失败:', error);
         alert('保存失败: ' + error.message);
         
         // 恢复按钮状态
-        const saveBtn = document.getElementById('save-btn');
         saveBtn.innerHTML = '<i class="fas fa-save"></i> 保存更改';
         saveBtn.disabled = false;
     }
@@ -1054,6 +1134,176 @@ function isValidThumbnailUrl(url) {
     
     // 检查是否是缩略图URL (支持旧格式和新格式)
     return url.includes('thumbnails/') || url.startsWith('app://thumbnail/');
+}
+
+/**
+ * 初始化文件名编辑功能
+ * @param {Object} video - 视频对象
+ */
+function initFileNameEdit(video) {
+    const filenameInput = document.getElementById('edit-filename');
+    const fileExtension = document.getElementById('file-extension');
+    const filenameError = document.getElementById('filename-error');
+    
+    if (!filenameInput || !fileExtension) return;
+    
+    // 清除所有错误状态
+    filenameInput.classList.remove('error');
+    filenameError.classList.remove('show');
+    filenameError.textContent = '';
+    
+    // 解析文件名和扩展名
+    const fileName = video.fileName || '';
+    const lastDotIndex = fileName.lastIndexOf('.');
+    
+    if (lastDotIndex > 0) {
+        const nameWithoutExt = fileName.substring(0, lastDotIndex);
+        const extension = fileName.substring(lastDotIndex);
+        
+        filenameInput.value = nameWithoutExt;
+        fileExtension.textContent = extension;
+    } else {
+        filenameInput.value = fileName;
+        fileExtension.textContent = '';
+    }
+    
+    // 清除之前的事件监听器
+    filenameInput.removeEventListener('input', handleFilenameInput);
+    filenameInput.removeEventListener('blur', handleFilenameBlur);
+    
+    // 添加输入验证事件
+    filenameInput.addEventListener('input', handleFilenameInput);
+    filenameInput.addEventListener('blur', handleFilenameBlur);
+}
+
+/**
+ * 处理文件名输入事件
+ */
+function handleFilenameInput() {
+    const filenameInput = document.getElementById('edit-filename');
+    const filenameError = document.getElementById('filename-error');
+    
+    // 清除错误状态
+    filenameInput.classList.remove('error');
+    filenameError.classList.remove('show');
+    
+    // 验证文件名格式
+    const filename = filenameInput.value.trim();
+    if (filename && !isValidFilename(filename)) {
+        filenameInput.classList.add('error');
+        filenameError.textContent = '文件名包含非法字符';
+        filenameError.classList.add('show');
+    }
+}
+
+/**
+ * 处理文件名失焦事件
+ */
+async function handleFilenameBlur() {
+    const filenameInput = document.getElementById('edit-filename');
+    const fileExtension = document.getElementById('file-extension');
+    const filenameError = document.getElementById('filename-error');
+    
+    const newName = filenameInput.value.trim();
+    const extension = fileExtension.textContent;
+    
+    if (!newName) return;
+    
+    // 检查文件名冲突
+    const fullNewName = newName + extension;
+    const currentVideo = videoData.find(v => v.id === currentVideoId);
+    
+    if (currentVideo && fullNewName !== currentVideo.fileName) {
+        const conflict = await checkFilenameConflict(newName, currentVideo.filePath);
+        if (conflict) {
+            filenameInput.classList.add('error');
+            filenameError.textContent = '文件名已存在，请使用其他名称';
+            filenameError.classList.add('show');
+        }
+    }
+}
+
+/**
+ * 检查文件名是否有效
+ * @param {string} filename - 文件名
+ * @returns {boolean} 是否有效
+ */
+function isValidFilename(filename) {
+    // Windows文件名非法字符
+    const invalidChars = /[<>:"/\\|?*]/;
+    return !invalidChars.test(filename) && filename.length > 0 && filename.length <= 255;
+}
+
+/**
+ * 检查文件名冲突（检查物理文件是否存在）
+ * @param {string} newFileNameWithoutExt - 新文件名（不含扩展名）
+ * @param {string} currentFilePath - 当前文件路径
+ * @returns {boolean} 是否存在冲突
+ */
+async function checkFilenameConflict(newFileNameWithoutExt, currentFilePath) {
+    try {
+        // 获取当前文件的目录和扩展名
+        const currentDir = currentFilePath.substring(0, currentFilePath.lastIndexOf('/'));
+        const fileExtension = currentFilePath.substring(currentFilePath.lastIndexOf('.'));
+        
+        // 构建新的文件路径
+        const newFilePath = `${currentDir}/${newFileNameWithoutExt}${fileExtension}`;
+        
+        // 如果新路径和当前路径相同，说明没有修改
+        if (newFilePath === currentFilePath) {
+            return false;
+        }
+        
+        // 检查物理文件是否存在
+        const exists = await window.electronAPI.checkFileExists(newFilePath);
+        return exists;
+    } catch (error) {
+        console.error('检查文件名冲突失败:', error);
+        return false;
+    }
+}
+
+/**
+ * 获取编辑后的文件名信息
+ * @returns {Object|null} 包含新文件名和路径的对象，如果没有修改或有错误则返回null
+ */
+function getEditedFileName() {
+    const filenameInput = document.getElementById('edit-filename');
+    const filenameError = document.getElementById('filename-error');
+    
+    if (!filenameInput || filenameError.classList.contains('show')) {
+        return null;
+    }
+    
+    const newName = filenameInput.value.trim();
+    if (!newName) {
+        return null;
+    }
+    
+    // 获取当前视频信息
+    const currentVideo = videoData.find(v => v.id === currentVideoId);
+    if (!currentVideo) {
+        return null;
+    }
+    
+    const currentFilePath = currentVideo.filePath;
+    const fileExtension = currentFilePath.substring(currentFilePath.lastIndexOf('.'));
+    const fullNewFileName = newName + fileExtension;
+    
+    // 如果文件名没有变化，返回null
+    if (fullNewFileName === currentVideo.fileName) {
+        return null;
+    }
+    
+    // 构建新的文件路径
+    const currentDir = currentFilePath.substring(0, currentFilePath.lastIndexOf('/'));
+    const newFilePath = `${currentDir}/${fullNewFileName}`;
+    
+    return {
+        newFileName: fullNewFileName,
+        newFilePath: newFilePath,
+        oldFilePath: currentFilePath
+    };
 }
 
 /**

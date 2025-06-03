@@ -33,7 +33,10 @@ let savedFilterState = {
     searchTerm: '',
     searchMode: 'include',
     selectedCollections: [],
-    selectedActors: []
+    selectedActors: [],
+    // 新增：保存分页状态
+    currentPage: 1,
+    pageSize: 20
 };
 
 // 分页配置
@@ -53,25 +56,36 @@ function saveCurrentFilterState() {
     const searchIcon = document.querySelector('.search-box i');
     const searchMode = searchIcon && searchIcon.classList.contains('fa-ban') ? 'exclude' : 'include';
     
-    // 保存状态
+    // 保存状态（包括分页状态）
     savedFilterState = {
         searchTerm: searchTerm,
         searchMode: searchMode,
         selectedCollections: [...(savedFilterState.selectedCollections || [])],
-        selectedActors: [...(savedFilterState.selectedActors || [])]
+        selectedActors: [...(savedFilterState.selectedActors || [])],
+        // 保存当前分页状态
+        currentPage: paginationConfig.currentPage,
+        pageSize: paginationConfig.pageSize
     };
     
-    console.log('保存筛选状态:', savedFilterState);
+    console.log('保存筛选状态（包括分页）:', savedFilterState);
 }
 
 // 恢复筛选状态 - 新增函数
 function restoreFilterState() {
-    console.log('恢复筛选状态:', savedFilterState);
+    console.log('恢复筛选状态（包括分页）:', savedFilterState);
     
     // 恢复搜索框内容
     const searchInput = document.querySelector('.search-input');
     if (searchInput && savedFilterState.searchTerm) {
         searchInput.value = savedFilterState.searchTerm;
+    }
+    
+    // 恢复分页状态
+    if (savedFilterState.currentPage) {
+        paginationConfig.currentPage = savedFilterState.currentPage;
+    }
+    if (savedFilterState.pageSize) {
+        paginationConfig.pageSize = savedFilterState.pageSize;
     }
     
     // 通知areaB模块恢复筛选状态
@@ -1010,7 +1024,7 @@ async function refreshVideoData() {
         restoreFilterState();
         
         // 手动合并筛选结果
-        applyFilters();
+        applyFilters(false);
         
         // 更新视图状态
         initViewState();
@@ -1038,8 +1052,8 @@ function onVideoDataChanged() {
     // 立即恢复筛选状态（同步进行，避免闪烁）
     restoreFilterState();
     
-    // 手动合并筛选结果
-    applyFilters();
+    // 手动合并筛选结果，不重置分页（保持当前分页位置）
+    applyFilters(false);
     
     // 更新视图状态
     initViewState();
@@ -1058,7 +1072,7 @@ document.addEventListener('videoDataChanged', function(event) {
 });
 
 // 应用所有筛选条件生成最终筛选结果
-function applyFilters() {
+function applyFilters(resetPagination = true) {
     if (!textFilteredData && !conditionFilteredData) {
         // 没有任何筛选条件，显示全部数据
         console.log('应用筛选: 无筛选条件，显示全部数据');
@@ -1083,8 +1097,21 @@ function applyFilters() {
         console.log(`应用筛选: 交集结果 ${filteredData.length} 个视频`);
     }
     
-    // 重置到第一页
-    paginationConfig.currentPage = 1;
+    // 只在需要时重置到第一页
+    if (resetPagination) {
+        paginationConfig.currentPage = 1;
+        console.log('重置分页到第一页');
+    } else {
+        console.log('保持当前分页位置:', paginationConfig.currentPage);
+        
+        // 确保当前页不超过新的总页数
+        const currentData = filteredData || videoData;
+        const totalPages = Math.max(1, Math.ceil(currentData.length / paginationConfig.pageSize));
+        if (paginationConfig.currentPage > totalPages) {
+            paginationConfig.currentPage = totalPages;
+            console.log('当前页超出范围，调整到最后一页:', paginationConfig.currentPage);
+        }
+    }
     
     // 应用排序
     sortAllData();
@@ -1105,8 +1132,8 @@ function setTextFilter(videos) {
         textFilteredData = videos;
     }
     
-    // 应用所有筛选条件
-    applyFilters();
+    // 应用所有筛选条件，重置分页
+    applyFilters(true);
 }
 
 // 设置条件筛选结果
@@ -1121,8 +1148,8 @@ function setConditionFilter(videos) {
         conditionFilteredData = videos;
     }
     
-    // 应用所有筛选条件
-    applyFilters();
+    // 应用所有筛选条件，重置分页
+    applyFilters(true);
 }
 
 // 静默设置文本筛选结果 - 新增函数
@@ -1332,7 +1359,8 @@ function sortAllData() {
             dataToSortCopy.sort((a, b) => {
                 const getPixelCount = (resolution) => {
                     if (!resolution) return 0;
-                    const match = resolution.match(/(\d+)x(\d+)/);
+                    // 修复正则表达式，同时支持 x 和 × 符号
+                    const match = resolution.match(/(\d+)[x×](\d+)/i);
                     return match ? parseInt(match[1]) * parseInt(match[2]) : 0;
                 };
                 

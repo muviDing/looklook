@@ -2453,22 +2453,19 @@ function registerIpcHandlers() {
   });
 
   ipcMain.handle('open-source-folder', async (event, filePath) => {
-    console.log(`打开源文件夹: ${filePath}`);
+    console.log(`打开源文件夹并定位文件: ${filePath}`);
     if (!filePath) {
       console.error('文件路径为空');
       return false;
     }
     
     try {
-      // 获取文件所在的文件夹路径
-      const folderPath = path.dirname(filePath);
-      
-      // 使用系统默认文件管理器打开文件夹
+      // 使用系统默认文件管理器打开文件夹并定位到具体文件
       const { shell } = require('electron');
-      await shell.openPath(folderPath);
+      await shell.showItemInFolder(filePath);
       return true;
     } catch (error) {
-      console.error('打开源文件夹失败:', error);
+      console.error('打开源文件夹并定位文件失败:', error);
       return false;
     }
   });
@@ -2514,6 +2511,41 @@ function registerIpcHandlers() {
     } catch (error) {
       console.error('更新视频数据失败:', error);
       throw error;
+    }
+  });
+
+  // 更新视频文件路径
+  ipcMain.handle('updateVideoFilePath', async (event, videoId, newFilePath) => {
+    console.log(`更新视频文件路径: ID=${videoId}, 新路径=${newFilePath}`);
+    try {
+      return await db.updateVideoFilePath(videoId, newFilePath);
+    } catch (error) {
+      console.error('更新视频文件路径失败:', error);
+      throw error;
+    }
+  });
+
+  // 重命名视频文件
+  ipcMain.handle('renameVideoFile', async (event, oldFilePath, newFilePath) => {
+    console.log(`重命名视频文件: ${oldFilePath} -> ${newFilePath}`);
+    try {
+      // 检查源文件是否存在
+      if (!fs.existsSync(oldFilePath)) {
+        throw new Error('源文件不存在');
+      }
+      
+      // 检查目标文件是否已存在
+      if (fs.existsSync(newFilePath)) {
+        throw new Error('目标文件已存在');
+      }
+      
+      // 重命名文件
+      fs.renameSync(oldFilePath, newFilePath);
+      console.log('文件重命名成功');
+      return { success: true };
+    } catch (error) {
+      console.error('重命名文件失败:', error);
+      return { success: false, error: error.message };
     }
   });
 

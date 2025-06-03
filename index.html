@@ -333,7 +333,13 @@
                             <h3 class="info-section-title">文件信息</h3>
                             <div class="info-grid">
                                 <div class="info-label">文件名</div>
-                                <div class="info-value" id="edit-view-filename">-</div>
+                                <div class="info-value">
+                                    <div class="input-with-button">
+                                        <input type="text" id="edit-filename" class="form-input" placeholder="输入文件名（不含扩展名）">
+                                        <span class="file-extension" id="file-extension">.mp4</span>
+                                    </div>
+                                    <div class="filename-error" id="filename-error">文件名已存在，请使用其他名称</div>
+                                </div>
                                 
                                 <div class="info-label">文件路径</div>
                                 <div class="info-value" id="edit-view-filepath">-</div>
