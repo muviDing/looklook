@@ -701,6 +701,16 @@ function initFunctionBar() {
         }
     });
     
+    // 校验重复按钮事件
+    document.querySelector('.check-duplicate-btn').addEventListener('click', async function() {
+        try {
+            const { showDuplicateCheckModal } = await import('./duplicateCheck.js');
+            showDuplicateCheckModal();
+        } catch (error) {
+            console.error('校验重复失败:', error);
+        }
+    });
+
     // 导入文件夹按钮事件
     document.querySelector('.import-folder-btn').addEventListener('click', async function() {
         try {

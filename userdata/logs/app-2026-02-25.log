@@ -1,0 +1,397 @@
+2026-02-25T01:45:42.179Z 日志开始 - 2026-02-25T01:45:42.179Z - 应用版本: 2.1.2 - 运行环境: 开发环境
+2026-02-25T01:45:42.180Z 系统信息: linux x64 - Node.js 18.18.2
+2026-02-25T01:45:42.180Z App路径: /workspace
+2026-02-25T01:45:42.180Z 可执行文件路径: /workspace/node_modules/electron/dist/electron
+2026-02-25T01:45:42.180Z [LOG] 日志文件已创建: /workspace/userdata/logs/app-2026-02-25.log
+2026-02-25T01:45:42.180Z [LOG] 应用准备就绪
+2026-02-25T01:45:42.180Z [ENV] 运行模式: 开发环境
+2026-02-25T01:45:42.180Z [ENV] 应用路径: /workspace
+2026-02-25T01:45:42.180Z [ENV] 可执行文件路径: /workspace/node_modules/electron/dist/electron
+2026-02-25T01:45:42.180Z [ENV] 用户数据路径: /workspace/userdata
+2026-02-25T01:45:42.180Z [FFMPEG_COPY] 开发环境中无需复制FFmpeg和FFprobe
+2026-02-25T01:45:42.180Z [LOG] 用户数据目录: /workspace/userdata
+2026-02-25T01:45:42.181Z [LOG] 缩略图目录: /workspace/userdata/thumbnails
+2026-02-25T01:45:42.181Z [LOG] 设置文件不存在，创建默认设置文件
+2026-02-25T01:45:42.181Z [LOG] 已创建默认设置文件: /workspace/userdata/settings.json
+2026-02-25T01:45:42.187Z [LOG] 打包状态: 开发环境
+2026-02-25T01:45:42.187Z [LOG] App Path: /workspace
+2026-02-25T01:45:42.187Z [LOG] Exe Path: /workspace/node_modules/electron/dist/electron
+2026-02-25T01:45:42.187Z [LOG] 应用目录: /workspace/node_modules/electron/dist
+2026-02-25T01:45:42.187Z [LOG] 资源目录: /workspace/node_modules/electron/dist/resources
+2026-02-25T01:45:42.187Z [TEST] 开始测试FFmpeg和FFprobe可执行性
+2026-02-25T01:45:42.187Z [TEST] 打包状态: 开发环境
+2026-02-25T01:45:42.187Z [TEST] App路径: /workspace
+2026-02-25T01:45:42.187Z [TEST] 可执行文件路径: /workspace/node_modules/electron/dist/electron
+2026-02-25T01:45:42.187Z [TEST] 应用目录: /workspace/node_modules/electron/dist
+2026-02-25T01:45:42.187Z [TEST] 资源目录: /workspace/node_modules/electron/dist/resources
+2026-02-25T01:45:42.187Z [LOG] 检查node_modules路径: /workspace/node_modules/electron/dist/resources/node_modules, 存在: false
+2026-02-25T01:45:42.187Z [TEST] 检查node_modules路径: /workspace/node_modules/electron/dist/resources/node_modules, 存在: false
+2026-02-25T01:45:42.187Z [LOG] 检查node_modules路径: /workspace/node_modules/electron/dist/node_modules, 存在: false
+2026-02-25T01:45:42.187Z [TEST] 检查node_modules路径: /workspace/node_modules/electron/dist/node_modules, 存在: false
+2026-02-25T01:45:42.187Z [LOG] 检查node_modules路径: /workspace/node_modules, 存在: true
+2026-02-25T01:45:42.187Z [TEST] 检查node_modules路径: /workspace/node_modules, 存在: true
+2026-02-25T01:45:42.187Z [TEST] /workspace/node_modules 中内容: .bin, .package-lock.json, 7zip-bin, @derhuerst, @develar, @electron, @isaacs, @malept, @pkgjs, @sindresorhus, @szmarczak, @tootallnate, @types, @xmldom, adler-32, agent-base, ajv, ajv-formats, ajv-keywords, ansi-regex, ansi-styles, app-builder-bin, app-builder-lib, archiver, archiver-utils, argparse, async, async-exit-hook, asynckit, at-least-node, atomically, balanced-match, base64-js, binary-search-tree, bl, bluebird, bluebird-lst, boolean, brace-expansion, buffer, buffer-crc32, buffer-equal, buffer-from, builder-util, builder-util-runtime, cacheable-lookup, cacheable-request, call-bind-apply-helpers, caseless, cfb, chalk, chownr, chromium-pickle-js, ci-info, cliui, clone-response, codepage, color-convert, color-name, combined-stream, commander, compare-version, compress-commons, concat-map, concat-stream, conf, config-file-ts, core-util-is, crc-32, crc32-stream, cross-spawn, debounce-fn, debug, decompress-response, defer-to-connect, define-data-property, define-properties, delayed-stream, detect-node, dir-compare, dmg-builder, dot-prop, dotenv, dotenv-expand, dunder-proto, eastasianwidth, ejs, electron, electron-builder, electron-builder-squirrel-windows, electron-publish, electron-store, emoji-regex, end-of-stream, env-paths, err-code, es-define-property, es-errors, es-object-atoms, es-set-tostringtag, es6-error, escalade, escape-string-regexp, extract-zip, fast-deep-equal, fast-json-stable-stringify, fast-uri, fd-slicer, ffmpeg-static, ffprobe-static, filelist, fluent-ffmpeg, foreground-child, form-data, frac, fs-constants, fs-extra, fs-minipass, fs.realpath, function-bind, get-caller-file, get-intrinsic, get-proto, get-stream, glob, global-agent, globalthis, gopd, got, graceful-fs, has-flag, has-property-descriptors, has-symbols, has-tostringtag, hasown, hosted-git-info, http-cache-semantics, http-proxy-agent, http-response-object, http2-wrapper, https-proxy-agent, iconv-lite, ieee754, immediate, inflight, inherits, is-ci, is-fullwidth-code-point, isarray, isbinaryfile, isexe, jackspeak, jake, js-yaml, json-buffer, json-schema-traverse, json-schema-typed, json-stringify-safe, json5, jsonfile, keyv, lazy-val, lazystream, lie, localforage, lodash, lodash.defaults, lodash.difference, lodash.flatten, lodash.isplainobject, lodash.union, lowercase-keys, lru-cache, matcher, math-intrinsics, mime, mime-db, mime-types, mimic-function, mimic-response, minimatch, minimist, minipass, minizlib, mkdirp, ms, nedb, normalize-path, normalize-url, object-keys, once, p-cancelable, package-json-from-dist, parse-cache-control, path-is-absolute, path-key, path-scurry, pend, plist, process-nextick-args, progress, promise-retry, pump, punycode, quick-lru, read-config-file, readable-stream, readdir-glob, require-directory, require-from-string, resolve-alpn, responselike, retry, rimraf, roarr, safe-buffer, safer-buffer, sanitize-filename, sax, semver, semver-compare, serialize-error, shebang-command, shebang-regex, signal-exit, simple-update-notifier, source-map, source-map-support, sprintf-js, ssf, stat-mode, string-width, string-width-cjs, string_decoder, strip-ansi, strip-ansi-cjs, stubborn-fs, sumchecker, supports-color, tar, tar-stream, temp-file, tmp, tmp-promise, truncate-utf8-bytes, type-fest, typedarray, typescript, uint8array-extras, underscore, undici-types, universalify, uri-js, utf8-byte-length, util-deprecate, when-exit, which, wmf, word, wrap-ansi, wrap-ansi-cjs, wrappy, xlsx, xmlbuilder, y18n, yallist, yargs, yargs-parser, yauzl, zip-stream
+2026-02-25T01:45:42.187Z [TEST] ffmpeg-static存在于 /workspace/node_modules/ffmpeg-static
+2026-02-25T01:45:42.187Z [TEST] ffmpeg-static内容: LICENSE, README.md, example.js, ffmpeg, ffmpeg.LICENSE, ffmpeg.README, index.js, install.js, package.json, types
+2026-02-25T01:45:42.187Z [TEST] ffprobe-static存在于 /workspace/node_modules/ffprobe-static
+2026-02-25T01:45:42.187Z [TEST] ffprobe-static内容: LICENSE, README.md, bin, index.js, package.json, tests
+2026-02-25T01:45:42.187Z [TEST] ffprobe-static/bin内容: darwin, linux, win32
+2026-02-25T01:45:42.187Z [TEST] ffprobe-static/bin/win32内容: ia32, x64
+2026-02-25T01:45:42.188Z [TEST] ffprobe-static/bin/win32/x64内容: ffprobe.exe
+2026-02-25T01:45:42.188Z [LOG] 测试FFmpeg可执行性...
+2026-02-25T01:45:42.188Z [TEST] 开始测试FFmpeg可执行性
+2026-02-25T01:45:42.188Z [LOG] FFmpeg文件存在: /workspace/node_modules/ffmpeg-static/ffmpeg
+2026-02-25T01:45:42.188Z [TEST] FFmpeg文件存在: /workspace/node_modules/ffmpeg-static/ffmpeg
+2026-02-25T01:45:42.188Z [LOG] FFmpeg有执行权限
+2026-02-25T01:45:42.188Z [TEST] FFmpeg有执行权限
+2026-02-25T01:45:42.193Z [LOG] 测试FFprobe可执行性...
+2026-02-25T01:45:42.193Z [LOG] FFprobe文件存在: /workspace/node_modules/ffprobe-static/bin/linux/x64/ffprobe
+2026-02-25T01:45:42.193Z [LOG] FFprobe有执行权限
+2026-02-25T01:45:42.228Z [LOG] 注册IPC事件处理程序...
+2026-02-25T01:45:42.229Z [LOG] IPC事件处理程序注册完成
+2026-02-25T01:45:42.251Z [LOG] FFprobe执行测试成功: ffprobe version 4.0.2-static https://johnvansickle.com/ffmpeg/  Copyright (c) 2007-2018 the FFmpeg developers
+2026-02-25T01:45:42.251Z [LOG] FFmpeg执行测试成功: ffmpeg version 6.0-static https://johnvansickle.com/ffmpeg/  Copyright (c) 2000-2023 the FFmpeg developers
+2026-02-25T01:45:42.251Z [TEST] FFmpeg执行测试成功: ffmpeg version 6.0-static https://johnvansickle.com/ffmpeg/  Copyright (c) 2000-2023 the FFmpeg developers
+2026-02-25T01:45:42.251Z [LOG] FFprobe执行测试成功: ffprobe version 4.0.2-static https://johnvansickle.com/ffmpeg/  Copyright (c) 2007-2018 the FFmpeg developers
+2026-02-25T01:45:42.251Z [LOG] FFmpeg执行测试成功: ffmpeg version 6.0-static https://johnvansickle.com/ffmpeg/  Copyright (c) 2000-2023 the FFmpeg developers
+2026-02-25T01:45:42.251Z [TEST] FFmpeg执行测试成功: ffmpeg version 6.0-static https://johnvansickle.com/ffmpeg/  Copyright (c) 2000-2023 the FFmpeg developers
+2026-02-25T01:45:42.300Z [LOG] 已加载 0 个视频记录
+2026-02-25T01:45:42.301Z [LOG] 没有视频数据，无需清理重复
+2026-02-25T01:45:42.301Z [LOG] 已加载枚举值[collection]: 0个
+2026-02-25T01:45:42.301Z [LOG] 已加载枚举值[actors]: 0个
+2026-02-25T01:45:42.302Z [LOG] 添加默认标签: 路径异常
+2026-02-25T01:45:42.303Z [LOG] 添加默认标签: 压缩前
+2026-02-25T01:45:42.305Z [LOG] 添加默认标签: 已压缩_高效感知无损
+2026-02-25T01:45:42.306Z [LOG] 添加默认标签: 已压缩_完全无损
+2026-02-25T01:45:42.307Z [LOG] 没有视频数据，无需检查文件存在性
+2026-02-25T01:45:42.308Z [LOG] 开始清理无效预览图...
+2026-02-25T01:45:42.308Z [CLEANUP] 开始清理无效预览图
+2026-02-25T01:45:42.308Z [LOG] 缩略图目录中没有图片文件
+2026-02-25T01:45:42.308Z [CLEANUP] 缩略图目录中没有图片文件
+2026-02-25T01:45:42.308Z [LOG] 数据库模块初始化完成
+2026-02-25T01:45:42.421Z [LOG] 处理get-videos请求
+2026-02-25T01:45:42.549Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T01:45:42.549Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T01:45:42.564Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T01:45:42.564Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T01:46:30.415Z 日志开始 - 2026-02-25T01:46:30.415Z - 应用版本: 2.1.2 - 运行环境: 开发环境
+2026-02-25T01:46:30.415Z 系统信息: linux x64 - Node.js 18.18.2
+2026-02-25T01:46:30.415Z App路径: /workspace
+2026-02-25T01:46:30.415Z 可执行文件路径: /workspace/node_modules/electron/dist/electron
+2026-02-25T01:46:30.416Z [LOG] 日志文件已创建: /workspace/userdata/logs/app-2026-02-25.log
+2026-02-25T01:46:30.416Z [LOG] 应用准备就绪
+2026-02-25T01:46:30.416Z [ENV] 运行模式: 开发环境
+2026-02-25T01:46:30.416Z [ENV] 应用路径: /workspace
+2026-02-25T01:46:30.416Z [ENV] 可执行文件路径: /workspace/node_modules/electron/dist/electron
+2026-02-25T01:46:30.416Z [ENV] 用户数据路径: /workspace/userdata
+2026-02-25T01:46:30.416Z [FFMPEG_COPY] 开发环境中无需复制FFmpeg和FFprobe
+2026-02-25T01:46:30.416Z [LOG] 用户数据目录: /workspace/userdata
+2026-02-25T01:46:30.416Z [LOG] 缩略图目录: /workspace/userdata/thumbnails
+2026-02-25T01:46:30.417Z [LOG] 设置文件已存在，无需创建默认设置
+2026-02-25T01:46:30.423Z [LOG] 打包状态: 开发环境
+2026-02-25T01:46:30.423Z [LOG] App Path: /workspace
+2026-02-25T01:46:30.423Z [LOG] Exe Path: /workspace/node_modules/electron/dist/electron
+2026-02-25T01:46:30.423Z [LOG] 应用目录: /workspace/node_modules/electron/dist
+2026-02-25T01:46:30.423Z [LOG] 资源目录: /workspace/node_modules/electron/dist/resources
+2026-02-25T01:46:30.423Z [TEST] 开始测试FFmpeg和FFprobe可执行性
+2026-02-25T01:46:30.423Z [TEST] 打包状态: 开发环境
+2026-02-25T01:46:30.423Z [TEST] App路径: /workspace
+2026-02-25T01:46:30.423Z [TEST] 可执行文件路径: /workspace/node_modules/electron/dist/electron
+2026-02-25T01:46:30.423Z [TEST] 应用目录: /workspace/node_modules/electron/dist
+2026-02-25T01:46:30.423Z [TEST] 资源目录: /workspace/node_modules/electron/dist/resources
+2026-02-25T01:46:30.423Z [LOG] 检查node_modules路径: /workspace/node_modules/electron/dist/resources/node_modules, 存在: false
+2026-02-25T01:46:30.423Z [TEST] 检查node_modules路径: /workspace/node_modules/electron/dist/resources/node_modules, 存在: false
+2026-02-25T01:46:30.423Z [LOG] 检查node_modules路径: /workspace/node_modules/electron/dist/node_modules, 存在: false
+2026-02-25T01:46:30.423Z [TEST] 检查node_modules路径: /workspace/node_modules/electron/dist/node_modules, 存在: false
+2026-02-25T01:46:30.423Z [LOG] 检查node_modules路径: /workspace/node_modules, 存在: true
+2026-02-25T01:46:30.423Z [TEST] 检查node_modules路径: /workspace/node_modules, 存在: true
+2026-02-25T01:46:30.423Z [TEST] /workspace/node_modules 中内容: .bin, .package-lock.json, 7zip-bin, @derhuerst, @develar, @electron, @isaacs, @malept, @pkgjs, @sindresorhus, @szmarczak, @tootallnate, @types, @xmldom, adler-32, agent-base, ajv, ajv-formats, ajv-keywords, ansi-regex, ansi-styles, app-builder-bin, app-builder-lib, archiver, archiver-utils, argparse, async, async-exit-hook, asynckit, at-least-node, atomically, balanced-match, base64-js, binary-search-tree, bl, bluebird, bluebird-lst, boolean, brace-expansion, buffer, buffer-crc32, buffer-equal, buffer-from, builder-util, builder-util-runtime, cacheable-lookup, cacheable-request, call-bind-apply-helpers, caseless, cfb, chalk, chownr, chromium-pickle-js, ci-info, cliui, clone-response, codepage, color-convert, color-name, combined-stream, commander, compare-version, compress-commons, concat-map, concat-stream, conf, config-file-ts, core-util-is, crc-32, crc32-stream, cross-spawn, debounce-fn, debug, decompress-response, defer-to-connect, define-data-property, define-properties, delayed-stream, detect-node, dir-compare, dmg-builder, dot-prop, dotenv, dotenv-expand, dunder-proto, eastasianwidth, ejs, electron, electron-builder, electron-builder-squirrel-windows, electron-publish, electron-store, emoji-regex, end-of-stream, env-paths, err-code, es-define-property, es-errors, es-object-atoms, es-set-tostringtag, es6-error, escalade, escape-string-regexp, extract-zip, fast-deep-equal, fast-json-stable-stringify, fast-uri, fd-slicer, ffmpeg-static, ffprobe-static, filelist, fluent-ffmpeg, foreground-child, form-data, frac, fs-constants, fs-extra, fs-minipass, fs.realpath, function-bind, get-caller-file, get-intrinsic, get-proto, get-stream, glob, global-agent, globalthis, gopd, got, graceful-fs, has-flag, has-property-descriptors, has-symbols, has-tostringtag, hasown, hosted-git-info, http-cache-semantics, http-proxy-agent, http-response-object, http2-wrapper, https-proxy-agent, iconv-lite, ieee754, immediate, inflight, inherits, is-ci, is-fullwidth-code-point, isarray, isbinaryfile, isexe, jackspeak, jake, js-yaml, json-buffer, json-schema-traverse, json-schema-typed, json-stringify-safe, json5, jsonfile, keyv, lazy-val, lazystream, lie, localforage, lodash, lodash.defaults, lodash.difference, lodash.flatten, lodash.isplainobject, lodash.union, lowercase-keys, lru-cache, matcher, math-intrinsics, mime, mime-db, mime-types, mimic-function, mimic-response, minimatch, minimist, minipass, minizlib, mkdirp, ms, nedb, normalize-path, normalize-url, object-keys, once, p-cancelable, package-json-from-dist, parse-cache-control, path-is-absolute, path-key, path-scurry, pend, plist, process-nextick-args, progress, promise-retry, pump, punycode, quick-lru, read-config-file, readable-stream, readdir-glob, require-directory, require-from-string, resolve-alpn, responselike, retry, rimraf, roarr, safe-buffer, safer-buffer, sanitize-filename, sax, semver, semver-compare, serialize-error, shebang-command, shebang-regex, signal-exit, simple-update-notifier, source-map, source-map-support, sprintf-js, ssf, stat-mode, string-width, string-width-cjs, string_decoder, strip-ansi, strip-ansi-cjs, stubborn-fs, sumchecker, supports-color, tar, tar-stream, temp-file, tmp, tmp-promise, truncate-utf8-bytes, type-fest, typedarray, typescript, uint8array-extras, underscore, undici-types, universalify, uri-js, utf8-byte-length, util-deprecate, when-exit, which, wmf, word, wrap-ansi, wrap-ansi-cjs, wrappy, xlsx, xmlbuilder, y18n, yallist, yargs, yargs-parser, yauzl, zip-stream
+2026-02-25T01:46:30.424Z [TEST] ffmpeg-static存在于 /workspace/node_modules/ffmpeg-static
+2026-02-25T01:46:30.424Z [TEST] ffmpeg-static内容: LICENSE, README.md, example.js, ffmpeg, ffmpeg.LICENSE, ffmpeg.README, index.js, install.js, package.json, types
+2026-02-25T01:46:30.424Z [TEST] ffprobe-static存在于 /workspace/node_modules/ffprobe-static
+2026-02-25T01:46:30.424Z [TEST] ffprobe-static内容: LICENSE, README.md, bin, index.js, package.json, tests
+2026-02-25T01:46:30.424Z [TEST] ffprobe-static/bin内容: darwin, linux, win32
+2026-02-25T01:46:30.424Z [TEST] ffprobe-static/bin/win32内容: ia32, x64
+2026-02-25T01:46:30.424Z [TEST] ffprobe-static/bin/win32/x64内容: ffprobe.exe
+2026-02-25T01:46:30.424Z [LOG] 测试FFmpeg可执行性...
+2026-02-25T01:46:30.424Z [TEST] 开始测试FFmpeg可执行性
+2026-02-25T01:46:30.424Z [LOG] FFmpeg文件存在: /workspace/node_modules/ffmpeg-static/ffmpeg
+2026-02-25T01:46:30.424Z [TEST] FFmpeg文件存在: /workspace/node_modules/ffmpeg-static/ffmpeg
+2026-02-25T01:46:30.424Z [LOG] FFmpeg有执行权限
+2026-02-25T01:46:30.424Z [TEST] FFmpeg有执行权限
+2026-02-25T01:46:30.428Z [LOG] 测试FFprobe可执行性...
+2026-02-25T01:46:30.428Z [LOG] FFprobe文件存在: /workspace/node_modules/ffprobe-static/bin/linux/x64/ffprobe
+2026-02-25T01:46:30.428Z [LOG] FFprobe有执行权限
+2026-02-25T01:46:30.455Z [LOG] 注册IPC事件处理程序...
+2026-02-25T01:46:30.455Z [LOG] IPC事件处理程序注册完成
+2026-02-25T01:46:30.467Z [LOG] FFprobe执行测试成功: ffprobe version 4.0.2-static https://johnvansickle.com/ffmpeg/  Copyright (c) 2007-2018 the FFmpeg developers
+2026-02-25T01:46:30.467Z [LOG] FFmpeg执行测试成功: ffmpeg version 6.0-static https://johnvansickle.com/ffmpeg/  Copyright (c) 2000-2023 the FFmpeg developers
+2026-02-25T01:46:30.470Z [TEST] FFmpeg执行测试成功: ffmpeg version 6.0-static https://johnvansickle.com/ffmpeg/  Copyright (c) 2000-2023 the FFmpeg developers
+2026-02-25T01:46:30.470Z [LOG] FFprobe执行测试成功: ffprobe version 4.0.2-static https://johnvansickle.com/ffmpeg/  Copyright (c) 2007-2018 the FFmpeg developers
+2026-02-25T01:46:30.470Z [LOG] FFmpeg执行测试成功: ffmpeg version 6.0-static https://johnvansickle.com/ffmpeg/  Copyright (c) 2000-2023 the FFmpeg developers
+2026-02-25T01:46:30.470Z [TEST] FFmpeg执行测试成功: ffmpeg version 6.0-static https://johnvansickle.com/ffmpeg/  Copyright (c) 2000-2023 the FFmpeg developers
+2026-02-25T01:46:42.566Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T01:46:42.568Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T01:47:12.647Z [LOG] 读取base64图片文件: assets/avatar.mw
+2026-02-25T01:47:12.647Z [LOG] 成功读取图片文件: assets/avatar.mw
+2026-02-25T01:47:12.652Z [LOG] 处理get-settings请求
+2026-02-25T01:47:12.652Z [LOG] 设置已加载
+2026-02-25T01:47:12.673Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T01:47:12.674Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T01:47:12.674Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T01:47:12.774Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T01:47:12.775Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T01:47:12.775Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T01:47:23.101Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T01:47:23.104Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T01:47:23.104Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T01:47:42.566Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T01:47:42.566Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T01:47:43.152Z [LOG] 处理import-folder请求
+2026-02-25T01:48:23.225Z [LOG] 用户选择了文件夹: /workspace/assets
+2026-02-25T01:48:23.226Z [LOG] 开始搜索文件夹 /workspace/assets 中的视频文件
+2026-02-25T01:48:23.227Z [LOG] 搜索文件夹: /workspace/assets
+2026-02-25T01:48:23.227Z [LOG] 在文件夹中找到 0 个视频文件
+2026-02-25T01:48:23.227Z [LOG] 文件夹中没有找到视频文件
+2026-02-25T01:48:42.566Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T01:48:42.567Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T01:49:42.569Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T01:49:42.570Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T01:50:42.570Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T01:50:42.573Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T01:51:42.569Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T01:51:42.570Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T01:52:42.567Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T01:52:42.568Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T01:53:42.566Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T01:53:42.566Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T01:54:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T01:54:42.566Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T01:55:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T01:55:42.565Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T01:56:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T01:56:42.565Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T01:57:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T01:57:42.565Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T01:58:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T01:58:42.566Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T01:59:42.566Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T01:59:42.566Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T02:00:42.566Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T02:00:42.567Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T02:01:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T02:01:42.565Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T02:02:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T02:02:42.565Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T02:03:42.566Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T02:03:42.566Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T02:04:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T02:04:42.565Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T02:05:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T02:05:42.566Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T02:06:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T02:06:42.565Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T02:07:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T02:07:42.565Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T02:08:42.566Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T02:08:42.566Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T02:09:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T02:09:42.566Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T02:10:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T02:10:42.566Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T02:11:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T02:11:42.566Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T02:12:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T02:12:42.566Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T02:13:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T02:13:42.566Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T02:14:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T02:14:42.565Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T02:15:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T02:15:42.565Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T02:16:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T02:16:42.565Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T02:17:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T02:17:42.565Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T02:18:42.566Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T02:18:42.566Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T02:19:42.568Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T02:19:42.570Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T02:20:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T02:20:42.566Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T02:21:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T02:21:42.566Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T02:22:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T02:22:42.566Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T02:23:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T02:23:42.566Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T02:24:42.566Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T02:24:42.567Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T02:25:42.566Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T02:25:42.566Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T02:26:42.566Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T02:26:42.567Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T02:27:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T02:27:42.566Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T02:28:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T02:28:42.565Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T02:29:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T02:29:42.565Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T02:30:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T02:30:42.565Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T02:31:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T02:31:42.566Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T02:32:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T02:32:42.566Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T02:33:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T02:33:42.566Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T02:34:42.566Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T02:34:42.566Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T02:35:42.567Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T02:35:42.569Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T02:36:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T02:36:42.565Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T02:37:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T02:37:42.565Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T02:38:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T02:38:42.565Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T02:39:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T02:39:42.565Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T02:40:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T02:40:42.565Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T02:41:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T02:41:42.566Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T02:42:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T02:42:42.565Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T02:43:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T02:43:42.566Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T02:44:42.566Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T02:44:42.567Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T02:45:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T02:45:42.566Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T02:46:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T02:46:42.565Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T02:47:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T02:47:42.565Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T02:48:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T02:48:42.565Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T02:49:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T02:49:42.565Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T02:50:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T02:50:42.565Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T02:51:42.566Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T02:51:42.567Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T02:52:42.566Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T02:52:42.567Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T02:53:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T02:53:42.565Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T02:54:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T02:54:42.565Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T02:55:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T02:55:42.565Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T02:56:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T02:56:42.565Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T02:57:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T02:57:42.565Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T02:58:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T02:58:42.565Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T02:59:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T02:59:42.566Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T03:00:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T03:00:42.565Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T03:01:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T03:01:42.565Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T03:02:42.566Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T03:02:42.567Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T03:03:42.567Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T03:03:42.568Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T03:04:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T03:04:42.566Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T03:05:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T03:05:42.565Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T03:06:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T03:06:42.565Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T03:07:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T03:07:42.565Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T03:08:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T03:08:42.566Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T03:09:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T03:09:42.566Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T03:10:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T03:10:42.566Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T03:11:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T03:11:42.565Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T03:12:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T03:12:42.565Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T03:13:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T03:13:42.566Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T03:14:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T03:14:42.566Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T03:15:42.566Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T03:15:42.566Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T03:16:42.566Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T03:16:42.567Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T03:17:42.567Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T03:17:42.569Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T03:18:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T03:18:42.566Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T03:19:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T03:19:42.565Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T03:20:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T03:20:42.565Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T03:21:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T03:21:42.565Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T03:22:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T03:22:42.566Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T03:23:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T03:23:42.566Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T03:24:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T03:24:42.566Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T03:25:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T03:25:42.565Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T03:26:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T03:26:42.565Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T03:26:49.217Z [LOG] 处理import-folder请求
+2026-02-25T03:27:02.111Z [LOG] 用户取消了选择或未选择任何文件夹
+2026-02-25T03:27:42.566Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T03:27:42.566Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T03:28:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T03:28:42.566Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T03:29:42.567Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T03:29:42.567Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T03:30:42.566Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T03:30:42.566Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T03:31:42.566Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T03:31:42.566Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T03:32:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T03:32:42.566Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T03:33:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T03:33:42.566Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T03:34:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T03:34:42.566Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T03:35:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T03:35:42.565Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T03:36:42.566Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T03:36:42.566Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T03:37:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T03:37:42.566Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T03:38:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T03:38:42.566Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T03:39:42.566Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T03:39:42.567Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T03:40:42.566Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T03:40:42.567Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T03:41:42.567Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T03:41:42.568Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T03:42:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T03:42:42.566Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T03:43:42.566Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T03:43:42.566Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T03:44:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T03:44:42.566Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T03:45:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T03:45:42.566Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T03:46:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T03:46:42.566Z [LOG] 处理get-enum-values请求: actors
+2026-02-25T03:47:42.565Z [LOG] 处理get-enum-values请求: collection
+2026-02-25T03:47:42.566Z [LOG] 处理get-enum-values请求: actors

@@ -2669,6 +2669,196 @@ function registerIpcHandlers() {
     }
   });
 
+  ipcMain.handle('check-duplicates', async () => {
+    console.log('处理check-duplicates请求');
+    try {
+      const videos = db.getVideoCache();
+
+      if (videos.length === 0) {
+        return { groups: [], totalDuplicates: 0 };
+      }
+
+      function getResolutionHeight(resolution) {
+        if (!resolution) return 0;
+        const parts = resolution.split('×');
+        return parts.length === 2 ? parseInt(parts[1]) || 0 : 0;
+      }
+
+      function parseSizeToBytes(sizeStr) {
+        if (!sizeStr) return 0;
+        const match = sizeStr.match(/([\d.]+)\s*(B|KB|MB|GB|TB)/i);
+        if (!match) return 0;
+        const value = parseFloat(match[1]);
+        const unit = match[2].toUpperCase();
+        const multiplier = { B: 1, KB: 1024, MB: 1048576, GB: 1073741824, TB: 1099511627776 };
+        return value * (multiplier[unit] || 0);
+      }
+
+      function setRecommendations(group) {
+        if (group.videos.length <= 1) return;
+        const sorted = [...group.videos].sort((a, b) => {
+          const resA = getResolutionHeight(a.resolution);
+          const resB = getResolutionHeight(b.resolution);
+          if (resA !== resB) return resB - resA;
+          const sizeA = parseSizeToBytes(a.fileSize);
+          const sizeB = parseSizeToBytes(b.fileSize);
+          return sizeB - sizeA;
+        });
+        const bestId = sorted[0].id;
+        group.videos.forEach(v => {
+          v.recommended = v.id === bestId ? 'keep' : 'remove';
+        });
+      }
+
+      const groups = [];
+      let groupId = 0;
+
+      const byFileName = {};
+      videos.forEach(v => {
+        if (!v.fileName) return;
+        const key = v.fileName.toLowerCase();
+        if (!byFileName[key]) byFileName[key] = [];
+        byFileName[key].push(v);
+      });
+      for (const [, vids] of Object.entries(byFileName)) {
+        if (vids.length >= 2) {
+          const group = {
+            id: ++groupId,
+            reason: '同名文件不同存放路径',
+            reasonType: 'fileName',
+            fileCount: vids.length,
+            videos: vids.map(v => ({
+              id: v.id, fileName: v.fileName, filePath: v.filePath,
+              fileSize: v.fileSize, resolution: v.resolution, duration: v.duration,
+              code: v.code, collection: v.collection, rating: v.rating
+            }))
+          };
+          setRecommendations(group);
+          groups.push(group);
+        }
+      }
+
+      const byCode = {};
+      videos.forEach(v => {
+        if (!v.code || v.code.trim() === '') return;
+        const key = v.code.toLowerCase().trim();
+        if (!byCode[key]) byCode[key] = [];
+        byCode[key].push(v);
+      });
+      for (const [, vids] of Object.entries(byCode)) {
+        if (vids.length >= 2) {
+          const vidIds = vids.map(v => v.id).sort().join(',');
+          const alreadyGrouped = groups.some(g =>
+            g.videos.map(v => v.id).sort().join(',') === vidIds
+          );
+          if (!alreadyGrouped) {
+            const group = {
+              id: ++groupId,
+              reason: '同标题视频',
+              reasonType: 'code',
+              fileCount: vids.length,
+              videos: vids.map(v => ({
+                id: v.id, fileName: v.fileName, filePath: v.filePath,
+                fileSize: v.fileSize, resolution: v.resolution, duration: v.duration,
+                code: v.code, collection: v.collection, rating: v.rating
+              }))
+            };
+            setRecommendations(group);
+            groups.push(group);
+          }
+        }
+      }
+
+      const byContent = {};
+      videos.forEach(v => {
+        if (!v.fileSize || !v.duration) return;
+        const key = `${v.fileSize}|${v.duration}`;
+        if (!byContent[key]) byContent[key] = [];
+        byContent[key].push(v);
+      });
+      for (const [, vids] of Object.entries(byContent)) {
+        if (vids.length >= 2) {
+          const vidIds = vids.map(v => v.id).sort().join(',');
+          const alreadyGrouped = groups.some(g =>
+            g.videos.map(v => v.id).sort().join(',') === vidIds
+          );
+          if (!alreadyGrouped) {
+            const group = {
+              id: ++groupId,
+              reason: '相同文件编码',
+              reasonType: 'encoding',
+              fileCount: vids.length,
+              videos: vids.map(v => ({
+                id: v.id, fileName: v.fileName, filePath: v.filePath,
+                fileSize: v.fileSize, resolution: v.resolution, duration: v.duration,
+                code: v.code, collection: v.collection, rating: v.rating
+              }))
+            };
+            setRecommendations(group);
+            groups.push(group);
+          }
+        }
+      }
+
+      const allDuplicateIds = new Set();
+      groups.forEach(g => g.videos.forEach(v => allDuplicateIds.add(v.id)));
+
+      console.log(`重复校验完成: ${groups.length} 个重复组，共 ${allDuplicateIds.size} 个视频`);
+
+      return {
+        groups,
+        totalDuplicates: allDuplicateIds.size
+      };
+    } catch (error) {
+      console.error('校验重复视频失败:', error.message);
+      throw error;
+    }
+  });
+
+  ipcMain.handle('delete-duplicate-videos', async (event, videoIds, moveToTrash) => {
+    console.log(`处理delete-duplicate-videos请求: ${videoIds.length} 个视频, moveToTrash=${moveToTrash}`);
+    const results = { deleted: 0, trashed: 0, errors: [] };
+
+    for (const videoId of videoIds) {
+      try {
+        const video = db.getVideoCache().find(v => String(v.id) === String(videoId));
+
+        if (video && moveToTrash && video.filePath) {
+          try {
+            if (fs.existsSync(video.filePath)) {
+              await shell.trashItem(video.filePath);
+              results.trashed++;
+              console.log(`文件已移入回收站: ${video.filePath}`);
+            }
+          } catch (trashError) {
+            console.error(`移入回收站失败: ${video.filePath}`, trashError.message);
+            results.errors.push({ videoId, error: `移入回收站失败: ${trashError.message}` });
+          }
+        }
+
+        if (video && video.thumbnailUrl) {
+          try {
+            const thumbPath = getThumbnailPath(video.thumbnailUrl);
+            if (thumbPath && fs.existsSync(thumbPath)) {
+              fs.unlinkSync(thumbPath);
+            }
+          } catch (e) {
+            // ignore thumbnail deletion errors
+          }
+        }
+
+        await db.deleteVideo(videoId);
+        results.deleted++;
+      } catch (error) {
+        console.error(`删除视频 ${videoId} 失败:`, error.message);
+        results.errors.push({ videoId, error: error.message });
+      }
+    }
+
+    console.log(`删除重复视频完成: 删除 ${results.deleted} 个, 移入回收站 ${results.trashed} 个`);
+    return results;
+  });
+
   // 枚举值管理
   ipcMain.handle('get-enum-values', async (event, enumType) => {
     console.log(`处理get-enum-values请求: ${enumType}`);

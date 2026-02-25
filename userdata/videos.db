@@ -1,0 +1,4 @@
+{"$$indexCreated":{"fieldName":"id","unique":true,"sparse":false}}
+{"$$indexCreated":{"fieldName":"filePath","unique":true,"sparse":false}}
+{"$$indexCreated":{"fieldName":"id","unique":true}}
+{"$$indexCreated":{"fieldName":"filePath","unique":true}}

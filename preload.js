@@ -74,6 +74,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   deleteVideo: (videoId) => ipcRenderer.invoke('delete-video', videoId),
   deleteVideos: (videoIds) => ipcRenderer.invoke('delete-videos', videoIds),
   cleanupDuplicates: () => ipcRenderer.invoke('cleanup-duplicates'),
+  checkDuplicates: () => ipcRenderer.invoke('check-duplicates'),
+  deleteDuplicateVideos: (videoIds, moveToTrash) => ipcRenderer.invoke('delete-duplicate-videos', videoIds, moveToTrash),
   
   // 枚举值管理
   getEnumValues: (enumType) => ipcRenderer.invoke('get-enum-values', enumType),
