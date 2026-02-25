@@ -19,6 +19,9 @@ yarn-error.log*
 *.sln
 *.sw?
 
+# 用户数据（运行时生成）
+userdata/
+
 # 操作系统文件
 .DS_Store
 Thumbs.db

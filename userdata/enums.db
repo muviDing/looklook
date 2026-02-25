@@ -1,6 +1,0 @@
-{"$$indexCreated":{"fieldName":"type","unique":true,"sparse":false}}
-{"type":"collection","values":["路径异常"],"_id":"LHZ17PCdB5KiG6if","createdAt":{"$$date":1771983942302},"updatedAt":{"$$date":1771983942302}}
-{"type":"collection","values":["压缩前","路径异常"],"_id":"LHZ17PCdB5KiG6if","createdAt":{"$$date":1771983942302},"updatedAt":{"$$date":1771983942304}}
-{"type":"collection","values":["压缩前","已压缩_高效感知无损","路径异常"],"_id":"LHZ17PCdB5KiG6if","createdAt":{"$$date":1771983942302},"updatedAt":{"$$date":1771983942305}}
-{"type":"collection","values":["压缩前","已压缩_完全无损","已压缩_高效感知无损","路径异常"],"_id":"LHZ17PCdB5KiG6if","createdAt":{"$$date":1771983942302},"updatedAt":{"$$date":1771983942307}}
-{"$$indexCreated":{"fieldName":"type","unique":true}}
